@@ -1,170 +1,159 @@
-/**
- * CommandProcessor.cpp - Multi-Axis Command Processing Implementation
- * 
- * Parses and executes commands for X, Y, Z axes
- */
-
 #include "CommandProcessor.h"
 #include "Config.h"
 #include "MotorControl.h"
 #include "PositionManager.h"
 #include "SystemOperations.h"
 #include "ALM_Monitor.h"
+#include <stdlib.h>
+#include <errno.h>
 
-extern volatile bool emergencyStopTriggered;
+static char inputBuffer[48];
+static uint8_t inputLength = 0;
+static bool inputOverflow = false;
+static bool discardLine = false;
+
+static Axis axisFromChar(char c) {
+  return c == 'X' ? AXIS_X : c == 'Y' ? AXIS_Y : c == 'Z' ? AXIS_Z : AXIS_NONE;
+}
+
+static bool parseNumber(const String& text, long& value) {
+  if (text.length() == 0) return false;
+  char* end = 0;
+  errno = 0;
+  value = strtol(text.c_str(), &end, 10);
+  return errno != ERANGE && end != text.c_str() && *end == '\0';
+}
 
 void processCommand(String command) {
-  Serial.print("Command received: ");
-  Serial.println(command);
-  
-  command.toUpperCase();
   command.trim();
-  
-  // Axis movement commands (X1000, Y-500, Z800)
-  if (command.startsWith("X")) {
-    long steps = command.substring(1).toInt();
-    processRelativeMove(AXIS_X, steps);
-  }
-  else if (command.startsWith("Y")) {
-    long steps = command.substring(1).toInt();
-    processRelativeMove(AXIS_Y, steps);
-  }
-  else if (command.startsWith("Z")) {
-    long steps = command.substring(1).toInt();
-    processRelativeMove(AXIS_Z, steps);
-  }
-  
-  // Absolute positioning (PX25, PY50, PZ75)
-  else if (command.startsWith("PX")) {
-    int percent = command.substring(2).toInt();
-    processAbsoluteMove(AXIS_X, percent);
-  }
-  else if (command.startsWith("PY")) {
-    int percent = command.substring(2).toInt();
-    processAbsoluteMove(AXIS_Y, percent);
-  }
-  else if (command.startsWith("PZ")) {
-    int percent = command.substring(2).toInt();
-    processAbsoluteMove(AXIS_Z, percent);
-  }
-  
-  // Homing commands
-  else if (command == "HX") {
-    runHoming(AXIS_X);
-  }
-  else if (command == "HY") {
-    runHoming(AXIS_Y);
-  }
-  else if (command == "HZ") {
-    runHoming(AXIS_Z);
-  }
-  else if (command == "H" || command == "HALL") {
-    runHomingAll();
-  }
-  
-  // System commands
-  else if (command == "R" || command == "STATUS") {
-    reportStatus();
-  }
-  else if (command == "S" || command == "STOP") {
+  command.toUpperCase();
+  if (command.length() == 0) return;
+
+  if (command == "?") {
+    Serial.println(F(FIRMWARE_ID));
+  } else if (command == "HB") {
+    noteJogHeartbeat();
+  } else if (command == "J0") {
+    smoothStopAll();
+  } else if (command == "J+" || command == "J-") {
+    changeJogSpeed(command[1] == '+');
+  } else if (command.length() >= 3 && command[0] == 'J' && axisFromChar(command[1]) != AXIS_NONE) {
+    long direction;
+    if (parseNumber(command.substring(2), direction) && direction >= -1 && direction <= 1) {
+      jogAxis(axisFromChar(command[1]), (int8_t)direction);
+    } else {
+      Serial.println(F("Invalid jog direction; use -1, 0, or 1"));
+    }
+  } else if (command == "O" || command == "S" || command == "STOP" || command == "!") {
     emergencyStop();
-  }
-  else if (command == "S0" || command == "CLEAR") {
+  } else if (command == "S0" || command == "CLEAR") {
     resumeOperations();
-  }
-  else if (command == "ALM") {
+  } else if (command == "R" || command == "STATUS") {
+    reportStatus();
+  } else if (command == "ALM") {
     printALMStatus();
-  }
-  
-  // Help
-  else if (command == "HELP") {
-    Serial.println("\n=== FarmBot Multi-Axis Commands ===");
-    Serial.println("Movement:");
-    Serial.println("  X#### - Move X-axis (e.g. X1000, X-500)");
-    Serial.println("  Y#### - Move Y-axis");
-    Serial.println("  Z#### - Move Z-axis");
-    Serial.println("\nAbsolute:");
-    Serial.println("  PX25/50/75 - X to 25%/50%/75%");
-    Serial.println("  PY25/50/75 - Y to 25%/50%/75%");
-    Serial.println("  PZ25/50/75 - Z to 25%/50%/75%");
-    Serial.println("\nHoming:");
-    Serial.println("  HX/HY/HZ - Home individual axis");
-    Serial.println("  H or HALL - Home all axes");
-    Serial.println("\nSystem:");
-    Serial.println("  R or STATUS - Show status");
-    Serial.println("  S or STOP - Emergency stop");
-    Serial.println("  S0 or CLEAR - Clear emergency");
-    Serial.println("  ALM - Show ALM status");
-    Serial.println("===================================\n");
-  }
-  
-  else {
-    Serial.println("Unknown command. Type HELP for command list.");
+  } else if (command == "0") {
+    zeroPosition();
+  } else if (command.length() == 2 && command[0] == '0' && axisFromChar(command[1]) != AXIS_NONE) {
+    zeroPosition(axisFromChar(command[1]));
+  } else if (command == "H" || command == "HALL" || command == "HX" || command == "HY" || command == "HZ") {
+    runHomingAll();
+  } else if (axisFromChar(command[0]) != AXIS_NONE) {
+    long steps;
+    if (parseNumber(command.substring(1), steps)) {
+      processRelativeMove(axisFromChar(command[0]), steps);
+    } else {
+      Serial.println(F("Invalid step count. Example: X1000 or Y-500"));
+    }
+  } else if (command.length() >= 3 && command[0] == 'P' && axisFromChar(command[1]) != AXIS_NONE) {
+    long percent;
+    if (parseNumber(command.substring(2), percent) && (percent == 25 || percent == 50 || percent == 75)) {
+      processAbsoluteMove(axisFromChar(command[1]), (int)percent);
+    } else {
+      Serial.println(F("Invalid percentage. Example: PX25, PY50, or PZ75"));
+    }
+  } else if (command == "HELP") {
+    Serial.println(F("X1000 / Y-500 / Z100: relative axis steps; one axis at a time"));
+    Serial.println(F("PX25 / PY50 / PZ75: percentage of configured travel after manual 0"));
+    Serial.println(F("0: record all current positions as the origin; 0X / 0Y / 0Z: one axis"));
+    Serial.println(F("O: emergency stop ALL motors immediately, no newline needed"));
+    Serial.println(F("Keyboard: Pi/gantry_keyboard.py; W/S X, A/D Y, Q/E Z, Space smooth stop"));
+    Serial.println(F("S / STOP / ! also stop; CLEAR / S0: clear after fixing faults"));
+    Serial.println(F("STATUS / R: position, reference, travel; ALM: driver alarms; HELP: commands"));
+    Serial.println(F("No limit switches or automatic homing. H/HX/HY/HZ/HALL do not move."));
+    Serial.println(F("Commands end with newline; O and ! stop without newline. O is reserved."));
+  } else {
+    Serial.println(F("Unknown command. Type HELP"));
   }
 }
 
 void reportStatus() {
-  Serial.println("\n╔════════════════════════════════════╗");
-  Serial.println("║       FARMBOT SYSTEM STATUS        ║");
-  Serial.println("╠════════════════════════════════════╣");
-  
-  // X-axis
-  Serial.print("║ X-Axis: ");
-  Serial.print(isSystemHomed(AXIS_X) ? "HOMED  " : "NOT HOMED");
-  Serial.println("                  ║");
-  Serial.print("║   Position: ");
-  Serial.print(getCurrentPosition(AXIS_X));
-  Serial.print(" (");
-  Serial.print(getPositionPercentage(AXIS_X));
-  Serial.println("%)");
-  Serial.print("║   Max: ");
-  Serial.println(getMaxPosition(AXIS_X));
-  
-  // Y-axis
-  Serial.print("║ Y-Axis: ");
-  Serial.print(isSystemHomed(AXIS_Y) ? "HOMED  " : "NOT HOMED");
-  Serial.println("                  ║");
-  Serial.print("║   Position: ");
-  Serial.print(getCurrentPosition(AXIS_Y));
-  Serial.print(" (");
-  Serial.print(getPositionPercentage(AXIS_Y));
-  Serial.println("%)");
-  Serial.print("║   Max: ");
-  Serial.println(getMaxPosition(AXIS_Y));
-  
-  // Z-axis
-  Serial.print("║ Z-Axis: ");
-  Serial.print(isSystemHomed(AXIS_Z) ? "HOMED  " : "NOT HOMED");
-  Serial.println("                  ║");
-  Serial.print("║   Position: ");
-  Serial.print(getCurrentPosition(AXIS_Z));
-  Serial.print(" (");
-  Serial.print(getPositionPercentage(AXIS_Z));
-  Serial.println("%)");
-  Serial.print("║   Max: ");
-  Serial.println(getMaxPosition(AXIS_Z));
-  
-  // System state
-  Serial.println("╠════════════════════════════════════╣");
-  Serial.print("║ Emergency Stop: ");
-  Serial.println(emergencyStopTriggered ? "ACTIVE  " : "Inactive");
-  Serial.print("║ ALM Critical: ");
-  Serial.println(isAnyALMCritical() ? "YES     " : "No      ");
-  Serial.println("╚════════════════════════════════════╝\n");
+  Serial.println(F("AgriGantry / AF-434 wiring: four motors, no limit switches"));
+  for (uint8_t i = AXIS_X; i <= AXIS_Z; ++i) {
+    Axis axis = (Axis)i;
+    Serial.print((char)('X' + i - AXIS_X));
+    Serial.print(F(": position="));
+    Serial.print(getCurrentPosition(axis));
+    Serial.print(F(" | velocity="));
+    Serial.print(getAxisVelocity(axis));
+    Serial.print(isPositionReferenced(axis) ? F(" | manual zero set") : F(" | unreferenced"));
+    Serial.print(F(" | travel="));
+    Serial.print(getMaxPosition(axis));
+    if (isPositionReferenced(axis) && getMaxPosition(axis) > 0) {
+      Serial.print(F(" | percent="));
+      Serial.print(getPositionPercentage(axis));
+    }
+    Serial.println();
+  }
+  Serial.println(isEmergencyStopActive() ? F("EMERGENCY STOP active") : F("Ready"));
+  Serial.print(F("Jog speed="));
+  Serial.println((long)getJogSpeed());
 }
 
-bool checkForEmergencyStop() {
-  if (Serial.available()) {
-    String input = Serial.readStringUntil('\n');
-    input.trim();
-    input.toUpperCase();
-    
-    if (input == "S" || input == "STOP") {
-      Serial.println("EMERGENCY STOP TRIGGERED DURING MOVEMENT!");
+static void consumeSerial(bool allowMotionCommands) {
+  // Shared nonblocking parser: a partial line must never pause motor pulses.
+  // Clear the buffer BEFORE dispatch so checks during a move can parse STOP.
+  for (uint8_t i = 0; i < 32 && Serial.available(); ++i) {
+    char c = (char)Serial.read();
+    if (c == '!' || c == 'O' || c == 'o') {
+      discardLine = discardLine || inputLength > 0 || inputOverflow;
+      inputLength = 0;
+      inputOverflow = false;
       emergencyStop();
-      return true;
+    } else if (c == '\n' || c == '\r') {
+      if (discardLine) {
+        discardLine = false;
+        inputLength = 0;
+        inputOverflow = false;
+        continue;
+      }
+      if (inputOverflow) {
+        inputLength = 0;
+        inputOverflow = false;
+        Serial.println(F("Command too long; discarded"));
+      } else if (inputLength) {
+        inputBuffer[inputLength] = '\0';
+        String command(inputBuffer);
+        command.trim();
+        command.toUpperCase();
+        inputLength = 0;
+        if (allowMotionCommands || command == "S" || command == "STOP" || command == "O") {
+          processCommand(command);
+        } else {
+          Serial.println(F("Busy moving; press O to stop"));
+        }
+      }
+    } else if (!inputOverflow && !discardLine) {
+      if (inputLength < sizeof(inputBuffer) - 1) inputBuffer[inputLength++] = c;
+      else inputOverflow = true;
     }
   }
-  
-  return emergencyStopTriggered || isAnyALMCritical();
+}
+
+void pollSerialCommands() {
+  consumeSerial(true);
+}
+bool checkForEmergencyStop() {
+  consumeSerial(false);
+  return isEmergencyStopActive();
 }

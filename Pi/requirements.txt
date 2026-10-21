@@ -1,0 +1,3 @@
+# Same serial and keyboard packages used by the AF-434 reference controller.
+pyserial==3.5
+pynput==1.7.7

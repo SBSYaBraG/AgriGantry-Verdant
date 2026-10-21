@@ -1,0 +1,5 @@
+# Local firmware build and regression-test outputs
+.build/
+.pio/
+__pycache__/
+.venv/

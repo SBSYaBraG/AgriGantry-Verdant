@@ -1,91 +1,81 @@
-/**
- * Config.h - Multi-Axis FarmBot Configuration
- * 
- * 5-motor system: X(2 motors), Y(1 motor), Z(2 motors)
- * Each axis has independent control and limit switches
- * All 5 motors have individual ALM monitoring
- */
-
+/** AF-434 hardware mapping with AgriGantry's three-axis command interface. */
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// -------------------- X-AXIS PINS (6) --------------------
-#define X_PUL_PIN 51
-#define X_DIR_PIN 53
-#define X_ENA_PIN 49
-#define X_LIMIT_PIN 26
-#define ALM_XL_PIN 37     // X Left motor
-#define ALM_XR_PIN 39     // X Right motor
+#include <Arduino.h>
 
-// -------------------- Y-AXIS PINS (5) --------------------
-#define Y_PUL_PIN 50
-#define Y_DIR_PIN 52
-#define Y_ENA_PIN 48
-#define Y_LIMIT_PIN 24
-#define ALM_Y_PIN 31      // Y motor
+enum Axis { AXIS_NONE = 0, AXIS_X = 1, AXIS_Y = 2, AXIS_Z = 3 };
+enum Motor { MOTOR_XL = 0, MOTOR_XR = 1, MOTOR_Y = 2, MOTOR_Z = 3, MOTOR_COUNT = 4 };
 
-// -------------------- Z-AXIS PINS (6) --------------------
-#define Z_PUL_PIN 42
-#define Z_DIR_PIN 44
-#define Z_ENA_PIN 40
-#define Z_LIMIT_PIN 22
-#define ALM_ZL_PIN 33     // Z Left motor
-#define ALM_ZR_PIN 35     // Z Right motor
+// Copied from AF-434/gantry_control/gantry_control.ino, commit 873e2b6.
+// Follow the executable sketch: its X direction settings differ from its README.
+#define XL_PUL_PIN 9
+#define XL_DIR_PIN 8
+#define XL_ENA_PIN 22
+#define ALM_XL_PIN 26
+#define XR_PUL_PIN 7
+#define XR_DIR_PIN 6
+#define XR_ENA_PIN 23
+#define ALM_XR_PIN 27
+#define Y_PUL_PIN 5
+#define Y_DIR_PIN 4
+#define Y_ENA_PIN 24
+#define ALM_Y_PIN 28
+#define Z_PUL_PIN 3
+#define Z_DIR_PIN 2
+#define Z_ENA_PIN 25
+#define ALM_Z_PIN 29
 
-// -------------------- MOTOR CONSTANTS --------------------
-#define CW false
-#define CCW true
+#define ENA_ENABLED_LEVEL LOW
+#define ENA_DISABLED_LEVEL HIGH
+#define ALM_ACTIVE_LEVEL HIGH
+#define ALM_DEBOUNCE_MS 5
+#define CW_LEVEL HIGH
+#define CCW_LEVEL LOW
+#define XL_POSITIVE_IS_CW true
+#define XR_POSITIVE_IS_CW true
+#define Y_POSITIVE_IS_CW true
+#define Z_POSITIVE_IS_CW false
 
-// Homing directions per axis
-#define X_HOME_DIRECTION CW
-#define Y_HOME_DIRECTION CW
-#define Z_HOME_DIRECTION CW
+struct MotorPins {
+  Axis axis;
+  uint8_t pul, dir, ena, alm;
+  bool positiveIsCW;
+};
+static const MotorPins MOTOR_PINS[MOTOR_COUNT] = {
+  {AXIS_X, XL_PUL_PIN, XL_DIR_PIN, XL_ENA_PIN, ALM_XL_PIN, XL_POSITIVE_IS_CW},
+  {AXIS_X, XR_PUL_PIN, XR_DIR_PIN, XR_ENA_PIN, ALM_XR_PIN, XR_POSITIVE_IS_CW},
+  {AXIS_Y, Y_PUL_PIN, Y_DIR_PIN, Y_ENA_PIN, ALM_Y_PIN, Y_POSITIVE_IS_CW},
+  {AXIS_Z, Z_PUL_PIN, Z_DIR_PIN, Z_ENA_PIN, ALM_Z_PIN, Z_POSITIVE_IS_CW}
+};
 
-// Speed control (microseconds)
-#define MIN_STEP_DELAY 80
-#define MAX_STEP_DELAY 175
-#define HOMING_STEP_DELAY 200
-#define ACCEL_RATE 10
-#define DECEL_RATE 10
+// No limit switches are installed. Set measured usable travel in pulses here
+// to use percentage positioning and software bounds after a manual 0 command.
+// Zero means unknown; do not invent a physical travel length.
+#ifndef X_TRAVEL_STEPS
+#define X_TRAVEL_STEPS 0L
+#endif
+#ifndef Y_TRAVEL_STEPS
+#define Y_TRAVEL_STEPS 0L
+#endif
+#ifndef Z_TRAVEL_STEPS
+#define Z_TRAVEL_STEPS 0L
+#endif
+static_assert(X_TRAVEL_STEPS >= 0 && Y_TRAVEL_STEPS >= 0 && Z_TRAVEL_STEPS >= 0,
+              "Travel lengths must be nonnegative step counts");
 
-// -------------------- SAFETY --------------------
-#define BACKOFF_STEPS 1600
-#define MAX_TRAVEL 100000000
-#define HOMING_TIMEOUT 100000000
-#define AUTO_HOME_ON_STARTUP true
-#define EMERGENCY_CHECK_INTERVAL 10
-#define ENA_STABILIZATION_TIME 200  // ms before first pulse
-
-// -------------------- ALM MONITORING --------------------
-#define EXPECTED_BLINK_DURATION 200
-#define BLINK_TOLERANCE 50
-#define PATTERN_WINDOW 5000
-#define ALM_CHECK_INTERVAL 1
-#define CONTINUOUS_ALARM_TIME 10000
-
-#define ALM_OVERCURRENT_PATTERN 1
-#define ALM_OVERVOLTAGE_PATTERN 2
-#define ALM_POSITION_ERROR_PATTERN 7
-
-// -------------------- SYSTEM --------------------
+// AF-434 velocity ramp and Timer1 step generator. Units are pulses and seconds.
+#define STEP_TICK_HZ 20000U
+#define STEP_PULSE_WIDTH_US 3
+#define DEFAULT_JOG_SPEED 1000.0f
+#define MIN_JOG_SPEED 100.0f
+#define MAX_JOG_SPEED 8000.0f
+#define JOG_SPEED_FACTOR 1.25f
+#define MOTION_ACCELERATION 3000.0f
+#define CRAWL_SPEED 150.0f
+#define CONTROL_PERIOD_US 1000UL
+#define JOG_TIMEOUT_MS 500UL
 #define SERIAL_BAUD_RATE 115200
+#define FIRMWARE_ID "AGRIGANTRY-KEYBOARD-v1"
 
-// Axis enumeration
-enum Axis {
-  AXIS_NONE = 0,
-  AXIS_X = 1,
-  AXIS_Y = 2,
-  AXIS_Z = 3
-};
-
-// Motor enumeration
-enum Motor {
-  MOTOR_XL = 0,  // X Left
-  MOTOR_XR = 1,  // X Right
-  MOTOR_Y = 2,   // Y
-  MOTOR_ZL = 3,  // Z Left
-  MOTOR_ZR = 4,  // Z Right
-  MOTOR_COUNT = 5
-};
-
-#endif // CONFIG_H
+#endif

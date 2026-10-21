@@ -1,0 +1,231 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 4 /Kids [6 0 R 8 0 R 10 0 R 12 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<< /Length 4607 >>
+stream
+BT /F2 11 Tf 0.12 0.38 0.25 rg 1 0 0 1 54 752.0 Tm (AGRI / GANTRY) Tj ET
+BT /F1 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 400 752.0 Tm (PROGRAM GUIDE) Tj ET
+0.12 0.38 0.25 RG 1.5 w 54 740 m 558 740 l S
+BT /F2 23 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 710.0 Tm (AgriGantry: how it works) Tj ET
+BT /F1 10 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 672.0 Tm (AF-434 wiring + AgriGantry commands | Arduino Mega 2560) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 647.0 Tm (The quick explanation) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 622.0 Tm (Your computer controls the gantry with hold-to-move keys or typed step commands. The Arduino) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 608.0 Tm (turns those requests into electrical pulses on the same pins as the working AF-434 program.) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 594.0 Tm (Motors 1 and 2 move both sides of X together; motor 3 moves Y; motor 4 moves Z. Hold W/S, A/D,) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 580.0 Tm (or Q/E to move, then release the key to slow smoothly to a stop. All three axes can jog) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 566.0 Tm (together. Press O to stop every motor immediately without Enter; that stop stays latched until) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 552.0 Tm (C in keyboard mode or CLEAR in command mode. There are no limit switches, so startup produces) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 538.0 Tm (no automatic motion or homing.) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 515.0 Tm (The wiring it actually uses) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 490.0 Tm (Motor / axis      PUL   DIR   ENA   ALM   Positive DIR level) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 477.5 Tm (M1 / X-left        9     8    22    26   HIGH) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 465.0 Tm (M2 / X-right       7     6    23    27   HIGH) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 452.5 Tm (M3 / Y             5     4    24    28   HIGH) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 440.0 Tm (M4 / Z             3     2    25    29   LOW) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 417.5 Tm (These are Mega digital pin numbers, copied from AF-434/gantry_control/gantry_control.ino at) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 403.5 Tm (commit 873e2b6. The executable reference sets both X motors' positive-is-clockwise settings to) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 389.5 Tm (true, even though parts of its README describe opposite rotation. This version follows that) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 375.5 Tm (executable configuration. Positive X means AF-434's forward direction, positive Y means right,) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 361.5 Tm (and positive Z means up. A negative step count reverses the relevant direction pins.) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 338.5 Tm (ENA LOW enables a driver and retains holding torque; ENA HIGH frees it. ALM HIGH means a fault) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 324.5 Tm (and ALM LOW means normal. Each motor has its own PUL, DIR, ENA, and ALM pins. The old five-) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 310.5 Tm (motor assumption and the old limit-switch pin assignments are gone. The AF-434 reference) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 296.5 Tm (repository was used for reading only.) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 273.5 Tm (Where the main parts live) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 248.5 Tm (Arduino/AgriGantry/AgriGantry.ino  Complete Arduino firmware) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 236.0 Tm (  Settings near the top          Pins, directions, travel) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 223.5 Tm (  Motor control section          Timer1 pulses and velocity ramps) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 211.0 Tm (  Position section               Counts and manual references) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 198.5 Tm (  Alarm section                  Four driver alarms) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 186.0 Tm (  Command section                Commands and immediate O stop) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 173.5 Tm (Pi/gantry_keyboard.py            Hold-to-move keys on the computer) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 161.0 Tm (Pi/Pi_FarmBotController_Class.py  Typed commands on the computer) Tj ET
+BT /F1 9 Tf 0.4 0.45 0.43 rg 1 0 0 1 54 34 Tm (AF-434 hardware / AgriGantry controls) Tj ET
+BT /F1 9 Tf 1 0 0 1 500 34 Tm (1 / 4) Tj ET
+endstream
+endobj
+8 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 9 0 R >>
+endobj
+9 0 obj
+<< /Length 5615 >>
+stream
+BT /F2 11 Tf 0.12 0.38 0.25 rg 1 0 0 1 54 752.0 Tm (AGRI / GANTRY) Tj ET
+BT /F1 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 400 752.0 Tm (PROGRAM GUIDE) Tj ET
+0.12 0.38 0.25 RG 1.5 w 54 740 m 558 740 l S
+BT /F2 23 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 710.0 Tm (From a command to movement) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 672.0 Tm (What happens when you send X1000) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 647.0 Tm (The Python controller sends X1000 followed by a newline over USB serial at 115200 baud.) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 633.0 Tm (CommandProcessor checks that X is a real axis and 1000 is a valid signed number. MotorControl) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 619.0 Tm (adds 1000 to X's current position to get the target, checks the stop latch, and sets the X) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 605.0 Tm (direction pins. It then generates 1000 step cycles. In each cycle it raises both X pulse pins) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 591.0 Tm (before lowering either, so M1 and M2 each receive 1000 pulses. X's stored position increases by) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 577.0 Tm (1000, rather than 2000, because the two motors represent one axis. Y and Z receive no pulses) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 563.0 Tm (during that command.) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 540.0 Tm (The motor engine now uses AF-434's Timer1 design: a 20,000 Hz interrupt generates pulses while) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 526.0 Tm (a 1,000 Hz controller smoothly adjusts velocity. A pulse is held HIGH for the configured three) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 512.0 Tm (microseconds. Default speed is 1000 steps/second, adjustable from 100 to 8000, and acceleration) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 498.0 Tm (is 3000 steps/second squared. Release a key or press Space and velocity ramps down to zero;) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 484.0 Tm (reversing first slows through zero, then accelerates the other way. At default speed a normal) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 470.0 Tm (release takes roughly 0.33 seconds and 167 steps. For a finite move, remaining distance) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 456.0 Tm (determines when braking begins; the final approach uses a low crawl speed and the pulse) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 442.0 Tm (generator stops at the exact target count. Keyboard axes can run together; new finite position) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 428.0 Tm (moves are accepted while idle.) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 405.0 Tm (What the position number means) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 380.0 Tm (Position is a software count of the pulses the Arduino issued. X1000 changes X by +1000; Y-500) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 366.0 Tm (changes Y by -500. The Arduino does not read the motors' encoder positions over the alarm) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 352.0 Tm (wires. The integrated drivers handle their own internal feedback. If a motor is moved by hand,) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 338.0 Tm (power is lost, or motion is interrupted abruptly, the software count may no longer describe the) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 324.0 Tm (physical location. An emergency stop therefore invalidates the manual position references.) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 310.0 Tm (Clearing a stop allows new relative moves, but does not recreate a physical zero.) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 287.0 Tm (No switches means a manual origin) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 262.0 Tm (Relative moves work immediately, without homing. To establish a physical reference, use small) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 248.0 Tm (relative moves to reach a known origin, then send 0 to record all current axis positions as) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 234.0 Tm (zero. Use 0X, 0Y, or 0Z to reference one axis. The command records the current location and) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 220.0 Tm (produces no motion. H, HX, HY, HZ, and HALL only explain that homing is unavailable. Nothing) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 206.0 Tm (searches for an end stop.) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 183.0 Tm (Percentage positioning also requires a known travel length. X_TRAVEL_STEPS, Y_TRAVEL_STEPS, and) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 169.0 Tm (Z_TRAVEL_STEPS near the top of AgriGantry.ino start at 0 because the measured usable distances) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 155.0 Tm (are unknown. Set an axis's actual travel in pulses, upload, then manually establish its origin) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 141.0 Tm (with 0 or its per-axis version. PX50 can then move X to half of that travel. Referenced) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 127.0 Tm (relative moves are clipped to the configured range of 0 through travel. Until both the) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 113.0 Tm (reference and travel exist, there are no physical software bounds; percentage moves are) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 99.0 Tm (refused.) Tj ET
+BT /F1 9 Tf 0.4 0.45 0.43 rg 1 0 0 1 54 34 Tm (AF-434 hardware / AgriGantry controls) Tj ET
+BT /F1 9 Tf 1 0 0 1 500 34 Tm (2 / 4) Tj ET
+endstream
+endobj
+10 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 11 0 R >>
+endobj
+11 0 obj
+<< /Length 4777 >>
+stream
+BT /F2 11 Tf 0.12 0.38 0.25 rg 1 0 0 1 54 752.0 Tm (AGRI / GANTRY) Tj ET
+BT /F1 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 400 752.0 Tm (PROGRAM GUIDE) Tj ET
+0.12 0.38 0.25 RG 1.5 w 54 740 m 558 740 l S
+BT /F2 23 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 710.0 Tm (Keyboard movement and stopping) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 672.0 Tm (Hold a key, release to slow down) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 647.0 Tm (Pi/gantry_keyboard.py starts a global pynput listener. Hold W/S to move X, A/D for Y, and Q/E) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 633.0 Tm (for Z. Releasing a key ramps that axis to rest, while other held axes keep moving. If opposite) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 619.0 Tm (keys on one axis are held, the latest press wins; releasing it falls back to the other held) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 605.0 Tm (key. Space requests a smooth stop on all axes. The controller sends a heartbeat every 100) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 591.0 Tm (milliseconds. If the Arduino receives no jog heartbeat for 500 milliseconds, it slows jogging) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 577.0 Tm (to a stop. Typed finite moves finish without requiring heartbeats.) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 554.0 Tm (O is the immediate emergency stop: it cancels every velocity and target instead of) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 540.0 Tm (decelerating. It also works during an incomplete or overflowing serial command. All movement) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 526.0 Tm (stays blocked until C in keyboard mode, or CLEAR/S0 in typed mode. A clear request succeeds) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 512.0 Tm (only when the live motor alarms are normal. Release and press movement keys again after) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 498.0 Tm (clearing; old held keys never restart by themselves. Drivers retain holding torque, including) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 484.0 Tm (Z. This is a software stop requiring a functioning controller, USB connection, and Arduino.) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 461.0 Tm (What happens when a motor reports an alarm) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 436.0 Tm (ALM pins 26, 27, 28, and 29 are monitored continuously. A HIGH input sustained for five) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 422.0 Tm (milliseconds latches the same global stop as O and identifies the motor. Shorter transients do) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 408.0 Tm (not latch. Returning LOW does not resume movement; clear the stop explicitly after resolving) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 394.0 Tm (the fault. This uses AF-434's actual active-HIGH alarm behavior.) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 371.0 Tm (Keyboard controls) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 346.0 Tm (W / S           X forward / backward, both motors) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 333.5 Tm (A / D           Y left / right) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 321.0 Tm (Q / E           Z up / down) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 308.5 Tm (Release key     Smooth stop on that axis) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 296.0 Tm (Space           Smooth stop on ALL axes) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 283.5 Tm (O               Immediate latched EMERGENCY STOP) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 271.0 Tm (C               Clear stop after fixing any alarm) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 258.5 Tm (+ / -           Increase / decrease jog speed) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 246.0 Tm (P               Show positions and velocities) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 233.5 Tm (0               Record manual zero while stopped) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 221.0 Tm (Esc             Smooth stop and exit) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 198.5 Tm (The listener captures keys even while another window has focus, so close keyboard control) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 184.5 Tm (before typing elsewhere. Run one controller at a time. The typed interface still accepts X1000,) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 170.5 Tm (Y-500, PX25/PY50/PZ75, 0X/0Y/0Z, STATUS, ALM, and HELP. A Serial Monitor may require Send/Enter) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 156.5 Tm (to transmit O; the Python listeners send it on the actual keypress.) Tj ET
+BT /F1 9 Tf 0.4 0.45 0.43 rg 1 0 0 1 54 34 Tm (AF-434 hardware / AgriGantry controls) Tj ET
+BT /F1 9 Tf 1 0 0 1 500 34 Tm (3 / 4) Tj ET
+endstream
+endobj
+12 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 13 0 R >>
+endobj
+13 0 obj
+<< /Length 4865 >>
+stream
+BT /F2 11 Tf 0.12 0.38 0.25 rg 1 0 0 1 54 752.0 Tm (AGRI / GANTRY) Tj ET
+BT /F1 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 400 752.0 Tm (PROGRAM GUIDE) Tj ET
+0.12 0.38 0.25 RG 1.5 w 54 740 m 558 740 l S
+BT /F2 23 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 710.0 Tm (Running and understanding it) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 672.0 Tm (Build, upload, and run) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 647.0 Tm (Open Arduino/AgriGantry/AgriGantry.ino in Arduino IDE. This one file contains all the gantry) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 633.0 Tm (firmware. Select Arduino Mega or Mega 2560, choose the Mega's port, and click Upload. Close) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 619.0 Tm (Serial Monitor, then run the Python keyboard controller on your computer using the commands) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 605.0 Tm (below from the repository root. Replace COM9 with your actual port; omit --port for automatic) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 591.0 Tm (detection.) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 568.0 Tm (python -m pip install -r Pi/requirements.txt) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 555.5 Tm (python Pi/gantry_keyboard.py --port COM9) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 543.0 Tm () Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 530.5 Tm (Optional typed interface, after closing keyboard control:) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 518.0 Tm (python Pi/Pi_FarmBotController_Class.py --port COM9) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 495.5 Tm (A desktop session with keyboard access and the listed packages is required. Startup pulses DTR) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 481.5 Tm (to reset the Mega, clears old serial transfers, waits for boot, and verifies the firmware) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 467.5 Tm (identity. Startup motor alarms are displayed and block keyboard movement. This reset sequence) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 453.5 Tm (recovered the COM9 idle write timeout. Use --list-ports to find the Mega if needed. Esc or) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 439.5 Tm (Ctrl+C requests a smooth stop before closing; after three seconds without confirmation it sends) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 425.5 Tm (an emergency stop. Startup holds torque and issues no movement pulses.) Tj ET
+BT /F2 13 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 402.5 Tm (What was verified) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 377.5 Tm (The complete .ino compiled using Arduino IDE's build tool for the Mega 2560: 16,688 bytes of) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 363.5 Tm (program storage and 548 bytes of static RAM. Native tests exercise the firmware against a) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 349.5 Tm (simulated 20 kHz timer and pins, with 3,278 checks across unknown-travel and configured-travel) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 335.5 Tm (builds. The same checks run directly against the single-file sketch with --standalone. They) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 321.5 Tm (cover paired pulses, finite targets and braking, key-release slowing, reversal through zero,) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 307.5 Tm (simultaneous axes, heartbeat loss, O stops, alarms, zero restrictions, and software travel) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 293.5 Tm (bounds. Twenty-five Python tests cover key handling, stop states, startup reset and alarm) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 279.5 Tm (preservation, serial errors, and firmware identification.) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 256.5 Tm (Movement was checked through build and simulation tests. Live USB communication on COM9 passed) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 242.5 Tm (two consecutive connections, firmware/status queries, and 80 idle heartbeat writes using the) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 228.5 Tm (new reset sequence. No movement commands were sent during that check. No firmware was uploaded) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 214.5 Tm (by the agent and physical movement remains untested. The commands below repeat the automated) Tj ET
+BT /F1 10.5 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 200.5 Tm (checks; the native runner uses MSVC.) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 177.5 Tm (python Farm-Bot/test/run_native.py --standalone) Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 165.0 Tm (python -m unittest discover -s Pi -p 'test_*.py') Tj ET
+BT /F3 9 Tf 0.13 0.18 0.17 rg 1 0 0 1 54 152.5 Tm (python Farm-Bot/tools/make_guide.py) Tj ET
+BT /F1 9 Tf 0.4 0.45 0.43 rg 1 0 0 1 54 34 Tm (AF-434 hardware / AgriGantry controls) Tj ET
+BT /F1 9 Tf 1 0 0 1 500 34 Tm (4 / 4) Tj ET
+endstream
+endobj
+xref
+0 14
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000135 00000 n 
+0000000205 00000 n 
+0000000280 00000 n 
+0000000348 00000 n 
+0000000494 00000 n 
+0000005153 00000 n 
+0000005299 00000 n 
+0000010966 00000 n 
+0000011114 00000 n 
+0000015944 00000 n 
+0000016092 00000 n 
+trailer
+<< /Size 14 /Root 1 0 R >>
+startxref
+21010
+%%EOF
