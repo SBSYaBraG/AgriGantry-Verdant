@@ -8,6 +8,7 @@
 #include "EncPositionManager.h"
 
 static unsigned long logSequence = 0;
+static String captureLabel = "UNLABELED";
 
 static long absoluteLong(long value) {
   return value < 0 ? -value : value;
@@ -17,6 +18,7 @@ static void printHelp() {
   Serial.println("\nENCODER BENCH-TEST COMMANDS");
   Serial.println("  STATUS              Show encoder inputs and measurements");
   Serial.println("  ZERO                Reset encoder and index counts");
+  Serial.println("  TAG <label>         Label the next capture (letters, digits, _ or -)");
   Serial.println("  F <pulses>          Forward constant-speed move (100 PPS)");
   Serial.println("  R <pulses>          Reverse constant-speed move (100 PPS)");
   Serial.println("  RF <pulses> <pps>   Forward move with accel/decel");
@@ -72,6 +74,32 @@ static bool parseRampArguments(const String& input, long& pulses, unsigned int& 
   return true;
 }
 
+static bool setCaptureLabel(const String& requestedLabel) {
+  String label = requestedLabel;
+  label.trim();
+
+  if (label.length() == 0 || label.length() > 24) {
+    Serial.println("ERROR: TAG must contain 1-24 letters, digits, _ or -.");
+    return false;
+  }
+
+  for (unsigned int index = 0; index < label.length(); index++) {
+    const char character = label.charAt(index);
+    const bool allowed = (character >= 'A' && character <= 'Z') ||
+                         (character >= '0' && character <= '9') ||
+                         character == '_' || character == '-';
+    if (!allowed) {
+      Serial.println("ERROR: TAG must contain only letters, digits, _ or -.");
+      return false;
+    }
+  }
+
+  captureLabel = label;
+  Serial.print("Capture label: ");
+  Serial.println(captureLabel);
+  return true;
+}
+
 static void printMoveLog(const EncMoveResult& result) {
   const long encoderDelta = result.encoderAfter - result.encoderBefore;
   const long expectedMagnitude = (result.commandedPulses * ENCODER_COUNTS_PER_REV) / TB6600_PULSES_PER_REV;
@@ -87,6 +115,8 @@ static void printMoveLog(const EncMoveResult& result) {
 
   Serial.print("ENC_LOG,");
   Serial.print(++logSequence);
+  Serial.print(',');
+  Serial.print(captureLabel);
   Serial.print(',');
   Serial.print(result.type == EncMoveType::Ramp ? "RAMP" : "CONSTANT");
   Serial.print(',');
@@ -113,18 +143,22 @@ static void printMoveLog(const EncMoveResult& result) {
   Serial.println(result.indexAfter);
   Serial.print("Index delta: ");
   Serial.println(indexDelta);
+  printEncoderIndexEvents();
 }
 
 void printEncTestWelcome() {
   Serial.println("\n============================================");
   Serial.println("  17HS19-2004-ME1K ENCODER BENCH TEST");
   Serial.println("============================================");
-  Serial.println("TB6600: PUL D39, DIR D43, ENA D41 unused");
-  Serial.println("Encoder: A D2, B D3, Z D20");
-  Serial.println("Start with TB6600 at 1.5 A and 400 pulses/rev.");
+  Serial.println("TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)");
+  Serial.println("AM26LV32E outputs: A D2, B D3, Z D18");
+  Serial.print("TB6600: ");
+  Serial.print(TB6600_PULSES_PER_REV);
+  Serial.println(" pulses/rev; current about 1.0 A RMS.");
   Serial.println("Keep the shaft unloaded and clear before motion.");
   printHelp();
-  Serial.println("CSV format: ENC_LOG,sequence,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after");
+  Serial.println("CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after");
+  Serial.println("CSV format: Z_EVENT,sequence,time_us,encoder_count");
 }
 
 void processEncTestCommand(const String& receivedInput) {
@@ -139,6 +173,8 @@ void processEncTestCommand(const String& receivedInput) {
   } else if (input == "ZERO") {
     resetEncoderMeasurements();
     Serial.println("Encoder and index counts reset to zero.");
+  } else if (input.startsWith("TAG ")) {
+    setCaptureLabel(input.substring(4));
   } else if (input.startsWith("F ")) {
     const long pulses = parsePositivePulses(input.substring(2));
     if (pulses > 0) printMoveLog(moveEncMotorConstant(pulses, true));

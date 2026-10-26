@@ -11,6 +11,10 @@ void initializeEncPositionManager();
 long getEncoderCount();
 long getEncoderIndexCount();
 void resetEncoderMeasurements();
+void resetEncoderIndexEvents();
+void beginEncoderIndexEventCapture();
+void endEncoderIndexEventCapture();
+void printEncoderIndexEvents();
 uint8_t getEncoderState();
 bool getEncoderIndexState();
 

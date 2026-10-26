@@ -1,0 +1,23 @@
+12:28:24.888 > 
+12:28:24.888 > ============================================
+12:28:24.888 >   17HS19-2004-ME1K ENCODER BENCH TEST
+12:28:24.888 > ============================================
+12:28:24.896 > TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)
+12:28:24.900 > AM26LV32E outputs: A D2, B D3, Z D18
+12:28:24.905 > TB6600: 400 pulses/rev; current about 1.0 A RMS.
+12:28:24.909 > Keep the shaft unloaded and clear before motion.
+12:28:24.913 > 
+12:28:24.913 > ENCODER BENCH-TEST COMMANDS
+12:28:24.917 >   STATUS              Show encoder inputs and measurements
+12:28:24.921 >   ZERO                Reset encoder and index counts
+12:28:24.922 >   TAG <label>         Label the next capture (letters, digits, _ or -)
+12:28:24.932 >   F <pulses>          Forward constant-speed move (100 PPS)
+12:28:24.937 >   R <pulses>          Reverse constant-speed move (100 PPS)
+12:28:24.940 >   RF <pulses> <pps>   Forward move with accel/decel
+12:28:24.945 >   RR <pulses> <pps>   Reverse move with accel/decel
+12:28:24.954 >   HELP                Show this command list
+12:28:24.954 > 
+12:28:24.958 > CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+12:29:15.804 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+12:29:15.812 > ENC_LOG,1,UNLABELED,CONSTANT,FORWARD,400,100,4677,0,-4000,-4000,4000,0,0,7
+12:29:15.817 > Index delta: 7

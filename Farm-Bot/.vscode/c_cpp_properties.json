@@ -8,12 +8,12 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "C:/Users/sbsya/OneDrive/Documents/GitHub/Farm-Bot/Farm-Bot/include",
-                "C:/Users/sbsya/OneDrive/Documents/GitHub/Farm-Bot/Farm-Bot/src",
-                "C:/Users/sbsya/OneDrive/Documents/GitHub/Farm-Bot/Farm-Bot/lib/Motors_Enc",
+                "C:/Users/sbsya/Documents/GitHub/Farm-Bot/Farm-Bot/include",
+                "C:/Users/sbsya/Documents/GitHub/Farm-Bot/Farm-Bot/src",
+                "C:/Users/sbsya/Documents/GitHub/Farm-Bot/Farm-Bot/lib/Motors_Enc",
                 "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/cores/arduino",
                 "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/variants/mega",
-                "C:/Users/sbsya/OneDrive/Documents/GitHub/Farm-Bot/Farm-Bot/lib/Motors_ICL",
+                "C:/Users/sbsya/Documents/GitHub/Farm-Bot/Farm-Bot/lib/Motors_ICL",
                 "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
                 "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                 "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
@@ -24,12 +24,12 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "C:/Users/sbsya/OneDrive/Documents/GitHub/Farm-Bot/Farm-Bot/include",
-                    "C:/Users/sbsya/OneDrive/Documents/GitHub/Farm-Bot/Farm-Bot/src",
-                    "C:/Users/sbsya/OneDrive/Documents/GitHub/Farm-Bot/Farm-Bot/lib/Motors_Enc",
+                    "C:/Users/sbsya/Documents/GitHub/Farm-Bot/Farm-Bot/include",
+                    "C:/Users/sbsya/Documents/GitHub/Farm-Bot/Farm-Bot/src",
+                    "C:/Users/sbsya/Documents/GitHub/Farm-Bot/Farm-Bot/lib/Motors_Enc",
                     "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/cores/arduino",
                     "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/variants/mega",
-                    "C:/Users/sbsya/OneDrive/Documents/GitHub/Farm-Bot/Farm-Bot/lib/Motors_ICL",
+                    "C:/Users/sbsya/Documents/GitHub/Farm-Bot/Farm-Bot/lib/Motors_ICL",
                     "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/libraries/EEPROM/src",
                     "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/libraries/HID/src",
                     "C:/Users/sbsya/.platformio/packages/framework-arduino-avr/libraries/SPI/src",
@@ -39,7 +39,7 @@
                 ]
             },
             "defines": [
-                "PLATFORMIO=60119",
+                "PLATFORMIO=60200",
                 "ARDUINO_AVR_MEGA2560",
                 "F_CPU=16000000L",
                 "ARDUINO_ARCH_AVR",

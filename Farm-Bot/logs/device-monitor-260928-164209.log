@@ -1,0 +1,50 @@
+16:42:10.252 > 
+16:42:10.252 > ============================================
+16:42:10.256 >   17HS19-2004-ME1K ENCODER BENCH TEST
+16:42:10.260 > ============================================
+16:42:10.264 > TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)
+16:42:10.268 > AM26LV32E outputs: A D2, B D3, Z D18
+16:42:10.272 > TB6600: 200 pulses/rev; current about 1.0 A RMS.
+16:42:10.276 > Keep the shaft unloaded and clear before motion.
+16:42:10.280 > 
+16:42:10.280 > ENCODER BENCH-TEST COMMANDS
+16:42:10.285 >   STATUS              Show encoder inputs and measurements
+16:42:10.289 >   ZERO                Reset encoder and index counts
+16:42:10.293 >   TAG <label>         Label the next capture (letters, digits, _ or -)
+16:42:10.301 >   F <pulses>          Forward constant-speed move (100 PPS)
+16:42:10.305 >   R <pulses>          Reverse constant-speed move (100 PPS)
+16:42:10.309 >   RF <pulses> <pps>   Forward move with accel/decel
+16:42:10.314 >   RR <pulses> <pps>   Reverse move with accel/decel
+16:42:10.318 >   HELP                Show this command list
+16:42:10.322 > 
+16:42:10.322 > CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+16:42:10.338 > CSV format: Z_EVENT,sequence,time_us,encoder_count
+16:42:15.724 > Encoder and index counts reset to zero.
+16:42:21.557 > Move complete. Encoder delta: -3999 | expected magnitude: 4000 | magnitude error: 1
+16:42:21.560 > ENC_LOG,1,UNLABELED,CONSTANT,FORWARD,200,100,3152,5,-3994,-3999,4000,1,0,11
+16:42:21.569 > Index delta: 11
+16:42:21.569 > Z_EVENT,1,10815280,-3432
+16:42:21.573 > Z_EVENT,2,10816676,-3436
+16:42:21.573 > Z_EVENT,3,10820740,-3431
+16:42:21.577 > Z_EVENT,4,10830712,-3431
+16:42:21.577 > Z_EVENT,5,10833496,-3434
+16:42:21.581 > Z_EVENT,6,10835912,-3429
+16:42:21.585 > Z_EVENT,7,10838424,-3433
+16:42:21.585 > Z_EVENT,8,10840784,-3430
+16:42:21.589 > Z_EVENT,9,10843884,-3433
+16:42:21.589 > Z_EVENT,10,10845224,-3429
+16:42:21.593 > Z_EVENT,11,10849648,-3433
+16:42:32.676 > Move complete. Encoder delta: -3999 | expected magnitude: 4000 | magnitude error: 1
+16:42:32.680 > ENC_LOG,2,UNLABELED,CONSTANT,FORWARD,200,100,3155,-3914,-7913,-3999,4000,1,11,22
+16:42:32.689 > Index delta: 11
+16:42:32.692 > Z_EVENT,1,21982704,-7429
+16:42:32.692 > Z_EVENT,2,21984100,-7434
+16:42:32.698 > Z_EVENT,3,21988188,-7430
+16:42:32.698 > Z_EVENT,4,21998140,-7429
+16:42:32.701 > Z_EVENT,5,22000968,-7431
+16:42:32.701 > Z_EVENT,6,22003352,-7427
+16:42:32.706 > Z_EVENT,7,22005864,-7431
+16:42:32.706 > Z_EVENT,8,22008172,-7427
+16:42:32.710 > Z_EVENT,9,22011288,-7431
+16:42:32.714 > Z_EVENT,10,22012644,-7428
+16:42:32.714 > Z_EVENT,11,22017020,-7432

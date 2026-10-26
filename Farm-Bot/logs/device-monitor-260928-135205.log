@@ -1,0 +1,188 @@
+13:52:06.030 > 
+13:52:06.030 > ============================================
+13:52:06.034 >   17HS19-2004-ME1K ENCODER BENCH TEST
+13:52:06.034 > ============================================
+13:52:06.042 > TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)
+13:52:06.046 > AM26LV32E outputs: A D2, B D3, Z D18
+13:52:06.046 > TB6600: 400 pulses/rev; current about 1.0 A RMS.
+13:52:06.054 > Keep the shaft unloaded and clear before motion.
+13:52:06.058 > 
+13:52:06.058 > ENCODER BENCH-TEST COMMANDS
+13:52:06.062 >   STATUS              Show encoder inputs and measurements
+13:52:06.066 >   ZERO                Reset encoder and index counts
+13:52:06.070 >   TAG <label>         Label the next capture (letters, digits, _ or -)
+13:52:06.074 >   F <pulses>          Forward constant-speed move (100 PPS)
+13:52:06.083 >   R <pulses>          Reverse constant-speed move (100 PPS)
+13:52:06.087 >   RF <pulses> <pps>   Forward move with accel/decel
+13:52:06.091 >   RR <pulses> <pps>   Reverse move with accel/decel
+13:52:06.095 >   HELP                Show this command list
+13:52:06.099 > 
+13:52:06.099 > CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+13:52:09.707 > Encoder and index counts reset to zero.
+13:52:37.130 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+13:52:37.134 > ENC_LOG,1,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+13:52:37.143 > Index delta: 0
+13:52:42.963 > Encoder and index counts reset to zero.
+13:53:18.138 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+13:53:18.147 > ENC_LOG,2,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+13:53:18.151 > Index delta: 0
+13:53:41.825 > Move complete. Encoder delta: 0 | expected magnitude: 8000 | magnitude error: 8000
+13:53:41.833 > ENC_LOG,3,UNLABELED,CONSTANT,FORWARD,800,100,8061,0,0,0,8000,8000,0,0
+13:53:41.837 > Index delta: 0
+13:54:14.874 > Move complete. Encoder delta: 0 | expected magnitude: 16000 | magnitude error: 16000
+13:54:14.884 > ENC_LOG,4,UNLABELED,CONSTANT,FORWARD,1600,100,16122,0,0,0,16000,16000,0,0
+13:54:14.892 > Index delta: 0
+13:54:34.261 > Move complete. Encoder delta: 0 | expected magnitude: 8000 | magnitude error: 8000
+13:54:34.266 > ENC_LOG,5,UNLABELED,CONSTANT,FORWARD,800,100,8061,0,0,0,8000,8000,0,0
+13:54:34.274 > Index delta: 0
+14:08:31.392 > Encoder and index counts reset to zero.
+14:08:46.624 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+14:08:46.633 > ENC_LOG,6,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+14:08:46.641 > Index delta: 0
+14:08:49.065 > Encoder and index counts reset to zero.
+14:09:05.273 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+14:09:05.283 > ENC_LOG,7,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+14:09:05.287 > Index delta: 0
+14:09:58.660 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+14:09:58.668 > ENC_LOG,8,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+14:09:58.672 > Index delta: 0
+14:13:40.872 > Encoder and index counts reset to zero.
+14:13:47.184 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+14:13:47.193 > ENC_LOG,9,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+14:13:47.196 > Index delta: 0
+14:19:30.320 > Encoder and index counts reset to zero.
+14:19:36.014 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+14:19:36.022 > ENC_LOG,10,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+14:19:36.030 > Index delta: 0
+14:19:45.619 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+14:19:45.623 > ENC_LOG,11,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+14:19:45.631 > Index delta: 0
+14:20:05.247 > Move complete. Encoder delta: 0 | expected magnitude: 8000 | magnitude error: 8000
+14:20:05.255 > ENC_LOG,12,UNLABELED,CONSTANT,FORWARD,800,100,8062,0,0,0,8000,8000,0,0
+14:20:05.258 > Index delta: 0
+14:22:41.118 > Move complete. Encoder delta: 0 | expected magnitude: 4400 | magnitude error: 4400
+14:22:41.125 > ENC_LOG,13,UNLABELED,CONSTANT,FORWARD,440,100,4433,0,0,0,4400,4400,0,0
+14:22:41.130 > Index delta: 0
+14:22:45.074 > Encoder and index counts reset to zero.
+15:06:29.268 > ERROR: Unknown command. Send HELP for commands.
+15:06:39.210 > Move complete. Encoder delta: 0 | expected magnitude: 8000 | magnitude error: 8000
+15:06:39.213 > ENC_LOG,14,UNLABELED,CONSTANT,FORWARD,800,100,8061,0,0,0,8000,8000,0,0
+15:06:39.221 > Index delta: 0
+15:06:53.689 > Move complete. Encoder delta: 0 | expected magnitude: 8000 | magnitude error: 8000
+15:06:53.692 > ENC_LOG,15,UNLABELED,CONSTANT,FORWARD,800,100,8061,0,0,0,8000,8000,0,0
+15:06:53.701 > Index delta: 0
+15:10:20.127 > Encoder and index counts reset to zero.
+15:10:27.243 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:10:27.251 > ENC_LOG,16,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,0
+15:10:27.255 > Index delta: 0
+15:10:34.889 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:10:34.898 > ENC_LOG,17,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,0
+15:10:34.902 > Index delta: 0
+15:24:43.948 > Move complete. Encoder delta: 0 | expected magnitude: 8000 | magnitude error: 8000
+15:24:43.957 > ENC_LOG,18,UNLABELED,CONSTANT,FORWARD,800,100,8061,0,0,0,8000,8000,0,0
+15:24:43.960 > Index delta: 0
+15:25:17.165 > Move complete. Encoder delta: 0 | expected magnitude: 16000 | magnitude error: 16000
+15:25:17.174 > ENC_LOG,19,UNLABELED,CONSTANT,FORWARD,1600,100,16122,0,0,0,16000,16000,0,0
+15:25:17.178 > Index delta: 0
+15:48:41.272 > Encoder and index counts reset to zero.
+15:48:50.765 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:48:50.775 > ENC_LOG,20,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+15:48:50.787 > Index delta: 0
+15:49:26.967 > Move complete. Encoder delta: 0 | expected magnitude: 240 | magnitude error: 240
+15:49:26.973 > ENC_LOG,21,UNLABELED,CONSTANT,FORWARD,24,100,242,0,0,0,240,240,0,0
+15:49:26.979 > Index delta: 0
+15:49:32.894 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:49:32.902 > ENC_LOG,22,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+15:49:32.906 > Index delta: 0
+15:51:57.610 > Encoder and index counts reset to zero.
+15:52:14.805 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:52:14.814 > ENC_LOG,23,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+15:52:14.818 > Index delta: 0
+15:52:26.662 > Encoder and index counts reset to zero.
+15:52:36.576 > Move complete. Encoder delta: 0 | expected magnitude: 8000 | magnitude error: 8000
+15:52:36.580 > ENC_LOG,24,UNLABELED,CONSTANT,FORWARD,800,100,8061,0,0,0,8000,8000,0,0
+15:52:36.588 > Index delta: 0
+15:52:48.323 > Move complete. Encoder delta: 0 | expected magnitude: 8000 | magnitude error: 8000
+15:52:48.331 > ENC_LOG,25,UNLABELED,CONSTANT,FORWARD,800,100,8061,0,0,0,8000,8000,0,0
+15:52:48.339 > Index delta: 0
+15:54:05.633 > Encoder and index counts reset to zero.
+15:54:11.308 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:54:11.319 > ENC_LOG,26,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,8
+15:54:11.323 > Index delta: 8
+15:54:15.221 > Encoder and index counts reset to zero.
+15:54:17.266 > ERROR: Unknown command. Send HELP for commands.
+15:54:20.580 > Move complete. Encoder delta: 0 | expected magnitude: 80 | magnitude error: 80
+15:54:20.583 > ENC_LOG,27,UNLABELED,CONSTANT,FORWARD,8,100,81,0,0,0,80,80,0,0
+15:54:20.591 > Index delta: 0
+15:54:23.012 > Encoder and index counts reset to zero.
+15:54:29.185 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:54:29.190 > ENC_LOG,28,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,8
+15:54:29.197 > Index delta: 8
+15:54:34.296 > Encoder and index counts reset to zero.
+15:54:40.326 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:54:40.331 > ENC_LOG,29,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,8
+15:54:40.338 > Index delta: 8
+15:55:30.255 > Encoder and index counts reset to zero.
+15:55:36.501 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:55:36.511 > ENC_LOG,30,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,8
+15:55:36.518 > Index delta: 8
+15:55:40.044 > Encoder and index counts reset to zero.
+15:55:45.440 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:55:45.451 > ENC_LOG,31,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,8
+15:55:45.459 > Index delta: 8
+15:55:59.504 > Encoder and index counts reset to zero.
+15:56:06.808 > Move complete. Encoder delta: 0 | expected magnitude: 2000 | magnitude error: 2000
+15:56:06.817 > ENC_LOG,32,UNLABELED,CONSTANT,FORWARD,200,100,2016,0,0,0,2000,2000,0,8
+15:56:06.823 > Index delta: 8
+15:57:08.610 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:57:08.620 > ENC_LOG,33,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,8,16
+15:57:08.623 > Index delta: 8
+15:57:19.461 > Encoder and index counts reset to zero.
+15:57:24.859 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:57:24.868 > ENC_LOG,34,UNLABELED,CONSTANT,FORWARD,400,100,4032,0,0,0,4000,4000,0,8
+15:57:24.876 > Index delta: 8
+15:57:32.887 > Encoder and index counts reset to zero.
+15:57:38.491 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+15:57:38.495 > ENC_LOG,35,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,8
+15:57:38.503 > Index delta: 8
+16:02:18.422 > Encoder and index counts reset to zero.
+16:02:24.137 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+16:02:24.146 > ENC_LOG,36,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,0
+16:02:24.151 > Index delta: 0
+16:02:33.329 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+16:02:33.337 > ENC_LOG,37,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,0
+16:02:33.341 > Index delta: 0
+16:08:48.889 > 
+16:08:48.889 > ============================================
+16:08:48.894 >   17HS19-2004-ME1K ENCODER BENCH TEST
+16:08:48.897 > ============================================
+16:08:48.901 > TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)
+16:08:48.905 > AM26LV32E outputs: A D2, B D3, Z D18
+16:08:48.909 > TB6600: 400 pulses/rev; current about 1.0 A RMS.
+16:08:48.913 > Keep the shaft unloaded and clear before motion.
+16:08:48.917 > 
+16:08:48.917 > ENCODER BENCH-TEST COMMANDS
+16:08:48.921 >   STATUS              Show encoder inputs and measurements
+16:08:48.925 >   ZERO                Reset encoder and index counts
+16:08:48.930 >   TAG <label>         Label the next capture (letters, digits, _ or -)
+16:08:48.938 >   F <pulses>          Forward constant-speed move (100 PPS)
+16:08:48.942 >   R <pulses>          Reverse constant-speed move (100 PPS)
+16:08:48.946 >   RF <pulses> <pps>   Forward move with accel/decel
+16:08:48.950 >   RR <pulses> <pps>   Reverse move with accel/decel
+16:08:48.954 >   HELP                Show this command list
+16:08:48.958 > 
+16:08:48.958 > CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+16:10:43.606 > Encoder and index counts reset to zero.
+16:11:15.949 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+16:11:15.958 > ENC_LOG,1,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+16:11:15.962 > Index delta: 0
+16:13:13.283 > Encoder and index counts reset to zero.
+16:13:22.718 > Move complete. Encoder delta: -3998 | expected magnitude: 4000 | magnitude error: 2
+16:13:22.724 > ENC_LOG,2,UNLABELED,CONSTANT,FORWARD,400,100,4633,-17,-4015,-3998,4000,2,0,7
+16:13:22.730 > Index delta: 7
+16:26:55.708 > ERROR: Unknown command. Send HELP for commands.
+16:27:09.454 > Capture label: Z_POSITION
+16:27:09.454 > Encoder and index counts reset to zero.
+16:27:26.285 > Move complete. Encoder delta: -3999 | expected magnitude: 4000 | magnitude error: 1
+16:27:26.293 > ENC_LOG,3,Z_POSITION,CONSTANT,FORWARD,400,100,4625,-5,-4004,-3999,4000,1,0,6
+16:27:26.296 > Index delta: 6

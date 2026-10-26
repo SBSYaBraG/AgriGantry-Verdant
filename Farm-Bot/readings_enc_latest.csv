@@ -1,0 +1,4 @@
+﻿sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+1,UNLABELED,CONSTANT,FORWARD,800,100,9317,0,-8001,-8001,8000,1,0,18
+2,UNLABELED,CONSTANT,FORWARD,400,100,4649,-8000,-12001,-4001,4000,1,18,25
+3,UNLABELED,CONSTANT,FORWARD,400,100,4649,-10,-4011,-4001,4000,1,0,7

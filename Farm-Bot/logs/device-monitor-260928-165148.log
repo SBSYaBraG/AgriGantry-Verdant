@@ -1,0 +1,99 @@
+16:51:49.163 > 
+16:51:49.163 > ============================================
+16:51:49.167 >   17HS19-2004-ME1K ENCODER BENCH TEST
+16:51:49.167 > ============================================
+16:51:49.171 > TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)
+16:51:49.180 > AM26LV32E outputs: A D2, B D3, Z D18
+16:51:49.180 > TB6600: 1600 pulses/rev; current about 1.0 A RMS.
+16:51:49.184 > Keep the shaft unloaded and clear before motion.
+16:51:49.188 > 
+16:51:49.188 > ENCODER BENCH-TEST COMMANDS
+16:51:49.192 >   STATUS              Show encoder inputs and measurements
+16:51:49.196 >   ZERO                Reset encoder and index counts
+16:51:49.200 >   TAG <label>         Label the next capture (letters, digits, _ or -)
+16:51:49.208 >   F <pulses>          Forward constant-speed move (100 PPS)
+16:51:49.212 >   R <pulses>          Reverse constant-speed move (100 PPS)
+16:51:49.220 >   RF <pulses> <pps>   Forward move with accel/decel
+16:51:49.224 >   RR <pulses> <pps>   Reverse move with accel/decel
+16:51:49.228 >   HELP                Show this command list
+16:51:49.232 > 
+16:51:49.232 > CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+16:51:49.249 > CSV format: Z_EVENT,sequence,time_us,encoder_count
+16:51:52.370 > Encoder and index counts reset to zero.
+16:52:12.608 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+16:52:12.612 > ENC_LOG,1,UNLABELED,CONSTANT,FORWARD,1600,100,16656,4,-3996,-4000,4000,0,0,5
+16:52:12.620 > Index delta: 5
+16:52:12.620 > Z_EVENT,1,21724956,-3592
+16:52:12.625 > Z_EVENT,2,21729684,-3591
+16:52:12.625 > Z_EVENT,3,21734144,-3591
+16:52:12.629 > Z_EVENT,4,21738596,-3595
+16:52:12.629 > Z_EVENT,5,21744528,-3596
+16:52:59.429 > Encoder and index counts reset to zero.
+16:53:11.140 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+16:53:11.144 > ENC_LOG,2,UNLABELED,RAMP,FORWARD,1600,600,3692,2,-3998,-4000,4000,0,0,1
+16:53:11.152 > Index delta: 1
+16:53:11.152 > Z_EVENT,1,81165552,-3593
+16:53:21.989 > Encoder and index counts reset to zero.
+16:53:32.093 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+16:53:32.102 > ENC_LOG,3,UNLABELED,RAMP,FORWARD,1600,600,3693,0,-4000,-4000,4000,0,0,1
+16:53:32.110 > Index delta: 1
+16:53:32.110 > Z_EVENT,1,102093280,-3596
+16:59:11.913 > Move complete. Encoder delta: -3998 | expected magnitude: 4000 | magnitude error: 2
+16:59:11.917 > ENC_LOG,4,UNLABELED,RAMP,FORWARD,1600,600,3691,-4000,-7998,-3998,4000,2,1,2
+16:59:11.926 > Index delta: 1
+16:59:11.926 > Z_EVENT,1,441431676,-7595
+17:08:58.312 > Encoder and index counts reset to zero.
+17:09:00.572 > Encoder and index counts reset to zero.
+17:09:12.136 > Move complete. Encoder delta: -4001 | expected magnitude: 4000 | magnitude error: 1
+17:09:12.141 > ENC_LOG,5,UNLABELED,RAMP,FORWARD,1600,600,3692,1,-4000,-4001,4000,1,0,1
+17:09:12.148 > Index delta: 1
+17:09:12.148 > Z_EVENT,1,1040809416,-3595
+17:09:47.516 > Encoder and index counts reset to zero.
+17:09:55.950 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+17:09:55.958 > ENC_LOG,6,UNLABELED,RAMP,FORWARD,1600,600,3692,2,-3998,-4000,4000,0,0,1
+17:09:55.966 > Index delta: 1
+17:09:55.966 > Z_EVENT,1,1084566560,-3593
+17:12:37.537 > Move complete. Encoder delta: -4001 | expected magnitude: 4000 | magnitude error: 1
+17:12:37.546 > ENC_LOG,7,UNLABELED,RAMP,FORWARD,1600,600,3692,-3998,-7999,-4001,4000,1,1,2
+17:12:37.554 > Index delta: 1
+17:12:37.554 > Z_EVENT,1,1245926772,-7593
+17:12:39.676 > Encoder and index counts reset to zero.
+17:12:41.851 > Encoder and index counts reset to zero.
+17:12:42.441 > ERROR: Unknown command. Send HELP for commands.
+17:12:52.116 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+17:12:52.125 > ENC_LOG,8,UNLABELED,RAMP,FORWARD,1600,600,3690,2,-3998,-4000,4000,0,0,1
+17:12:52.128 > Index delta: 1
+17:12:52.128 > Z_EVENT,1,1260482808,-3593
+17:32:04.401 > Encoder and index counts reset to zero.
+17:32:04.949 > Encoder and index counts reset to zero.
+17:32:05.503 > Encoder and index counts reset to zero.
+17:32:06.945 > ERROR: Unknown command. Send HELP for commands.
+17:32:08.162 > Encoder and index counts reset to zero.
+17:32:18.064 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+17:32:18.074 > ENC_LOG,9,UNLABELED,RAMP,FORWARD,1600,600,3693,2,-3998,-4000,4000,0,0,1
+17:32:18.077 > Index delta: 1
+17:32:18.081 > Z_EVENT,1,2424836512,-3593
+17:38:32.334 > ERROR: Unknown command. Send HELP for commands.
+17:38:33.260 > Encoder and index counts reset to zero.
+17:38:33.802 > Encoder and index counts reset to zero.
+17:38:41.636 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+17:38:41.641 > ENC_LOG,10,UNLABELED,RAMP,FORWARD,1600,600,3692,2,-3998,-4000,4000,0,0,1
+17:38:41.652 > Index delta: 1
+17:38:41.652 > Z_EVENT,1,2807883720,-3594
+17:38:49.788 > Encoder and index counts reset to zero.
+17:39:01.142 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+17:39:01.142 > ENC_LOG,11,UNLABELED,RAMP,FORWARD,1600,600,3692,2,-3998,-4000,4000,0,0,1
+17:39:01.154 > Index delta: 1
+17:39:01.159 > Z_EVENT,1,2827360784,-3593
+17:39:21.204 > Encoder and index counts reset to zero.
+17:39:29.584 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+17:39:29.592 > ENC_LOG,12,UNLABELED,RAMP,FORWARD,1600,600,3692,1,-3999,-4000,4000,0,0,1
+17:39:29.600 > Index delta: 1
+17:39:29.600 > Z_EVENT,1,2855764700,-3595
+17:45:13.670 > Encoder and index counts reset to zero.
+17:45:14.220 > Encoder and index counts reset to zero.
+17:45:14.759 > Encoder and index counts reset to zero.
+17:45:21.884 > Move complete. Encoder delta: -4000 | expected magnitude: 4000 | magnitude error: 0
+17:45:21.887 > ENC_LOG,13,UNLABELED,RAMP,FORWARD,1600,600,3691,1,-3999,-4000,4000,0,0,1
+17:45:21.897 > Index delta: 1
+17:45:21.897 > Z_EVENT,1,3207567036,-3595

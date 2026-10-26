@@ -1,0 +1,38 @@
+12:52:33.513 > 
+12:52:33.513 > ============================================
+12:52:33.517 >   17HS19-2004-ME1K ENCODER BENCH TEST
+12:52:33.521 > ============================================
+12:52:33.525 > TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)
+12:52:33.529 > AM26LV32E outputs: A D2, B D3, Z D18
+12:52:33.534 > TB6600: 400 pulses/rev; current about 1.0 A RMS.
+12:52:33.538 > Keep the shaft unloaded and clear before motion.
+12:52:33.542 > 
+12:52:33.542 > ENCODER BENCH-TEST COMMANDS
+12:52:33.546 >   STATUS              Show encoder inputs and measurements
+12:52:33.550 >   ZERO                Reset encoder and index counts
+12:52:33.554 >   TAG <label>         Label the next capture (letters, digits, _ or -)
+12:52:33.558 >   F <pulses>          Forward constant-speed move (100 PPS)
+12:52:33.566 >   R <pulses>          Reverse constant-speed move (100 PPS)
+12:52:33.570 >   RF <pulses> <pps>   Forward move with accel/decel
+12:52:33.574 >   RR <pulses> <pps>   Reverse move with accel/decel
+12:52:33.579 >   HELP                Show this command list
+12:52:33.583 > 
+12:52:33.583 > CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+12:52:47.123 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+12:52:47.128 > ENC_LOG,1,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+12:52:47.136 > Index delta: 0
+12:56:29.898 > Encoder and index counts reset to zero.
+12:56:49.230 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+12:56:49.239 > ENC_LOG,2,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+12:56:49.242 > Index delta: 0
+12:57:12.023 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+12:57:12.032 > ENC_LOG,3,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,0
+12:57:12.040 > Index delta: 0
+12:57:21.355 > Encoder and index counts reset to zero.
+12:57:32.352 > Move complete. Encoder delta: 0 | expected magnitude: 8000 | magnitude error: 8000
+12:57:32.360 > ENC_LOG,4,UNLABELED,CONSTANT,FORWARD,800,100,8060,0,0,0,8000,8000,0,0
+12:57:32.364 > Index delta: 0
+13:13:45.763 > Encoder and index counts reset to zero.
+13:14:16.016 > Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+13:14:16.024 > ENC_LOG,5,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+13:14:16.029 > Index delta: 0

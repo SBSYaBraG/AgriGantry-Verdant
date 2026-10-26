@@ -1,0 +1,76 @@
+16:33:54.254 > 
+16:33:54.255 > ============================================
+16:33:54.259 >   17HS19-2004-ME1K ENCODER BENCH TEST
+16:33:54.263 > ============================================
+16:33:54.267 > TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)
+16:33:54.271 > AM26LV32E outputs: A D2, B D3, Z D18
+16:33:54.275 > TB6600: 400 pulses/rev; current about 1.0 A RMS.
+16:33:54.279 > Keep the shaft unloaded and clear before motion.
+16:33:54.284 > 
+16:33:54.284 > ENCODER BENCH-TEST COMMANDS
+16:33:54.287 >   STATUS              Show encoder inputs and measurements
+16:33:54.292 >   ZERO                Reset encoder and index counts
+16:33:54.296 >   TAG <label>         Label the next capture (letters, digits, _ or -)
+16:33:54.304 >   F <pulses>          Forward constant-speed move (100 PPS)
+16:33:54.308 >   R <pulses>          Reverse constant-speed move (100 PPS)
+16:33:54.312 >   RF <pulses> <pps>   Forward move with accel/decel
+16:33:54.316 >   RR <pulses> <pps>   Reverse move with accel/decel
+16:33:54.321 >   HELP                Show this command list
+16:33:54.324 > 
+16:33:54.324 > CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+16:33:54.345 > CSV format: Z_EVENT,sequence,time_us,encoder_count
+16:34:17.516 > Encoder and index counts reset to zero.
+16:34:23.831 > Move complete. Encoder delta: -3999 | expected magnitude: 4000 | magnitude error: 1
+16:34:23.836 > ENC_LOG,1,UNLABELED,CONSTANT,FORWARD,400,100,4625,-2,-4001,-3999,4000,1,0,6
+16:34:23.844 > Index delta: 6
+16:34:23.844 > Z_EVENT,1,28699412,-3289
+16:34:23.848 > Z_EVENT,2,28701768,-3294
+16:34:23.848 > Z_EVENT,3,28703712,-3290
+16:34:23.852 > Z_EVENT,4,28706080,-3294
+16:34:23.852 > Z_EVENT,5,28707852,-3289
+16:34:23.856 > Z_EVENT,6,28710412,-3294
+16:36:53.075 > Encoder and index counts reset to zero.
+16:36:59.035 > Move complete. Encoder delta: -4007 | expected magnitude: 2000 | magnitude error: 2007
+16:36:59.043 > ENC_LOG,2,UNLABELED,CONSTANT,FORWARD,200,100,3161,-5,-4012,-4007,2000,2007,0,12
+16:36:59.048 > Index delta: 12
+16:36:59.051 > Z_EVENT,1,183919100,-3293
+16:36:59.051 > Z_EVENT,2,183920552,-3297
+16:36:59.057 > Z_EVENT,3,183924624,-3293
+16:36:59.057 > Z_EVENT,4,183929744,-3293
+16:36:59.059 > Z_EVENT,5,183935084,-3292
+16:36:59.064 > Z_EVENT,6,183937952,-3295
+16:36:59.064 > Z_EVENT,7,183940408,-3290
+16:36:59.068 > Z_EVENT,8,183942936,-3294
+16:36:59.068 > Z_EVENT,9,183945320,-3291
+16:36:59.072 > Z_EVENT,10,183948388,-3295
+16:36:59.072 > Z_EVENT,11,183950096,-3290
+16:36:59.076 > Z_EVENT,12,183954400,-3294
+16:37:12.612 > ERROR: Pulses must be a positive whole number.
+16:37:15.181 > Encoder and index counts reset to zero.
+16:37:23.925 > Move complete. Encoder delta: -7999 | expected magnitude: 4000 | magnitude error: 3999
+16:37:23.935 > ENC_LOG,3,UNLABELED,CONSTANT,FORWARD,400,100,6300,27,-7972,-7999,4000,3999,0,24
+16:37:23.942 > Index delta: 24
+16:37:23.942 > Z_EVENT,1,205689528,-3330
+16:37:23.946 > Z_EVENT,2,205690924,-3334
+16:37:23.946 > Z_EVENT,3,205694988,-3329
+16:37:23.950 > Z_EVENT,4,205700052,-3330
+16:37:23.950 > Z_EVENT,5,205705320,-3330
+16:37:23.954 > Z_EVENT,6,205708180,-3334
+16:37:23.958 > Z_EVENT,7,205710652,-3329
+16:37:23.958 > Z_EVENT,8,205713156,-3334
+16:37:23.962 > Z_EVENT,9,205715444,-3329
+16:37:23.962 > Z_EVENT,10,205718584,-3334
+16:37:23.966 > Z_EVENT,11,205721176,-3329
+16:37:23.966 > Z_EVENT,12,205725424,-3334
+16:37:23.971 > Z_EVENT,13,208842920,-7330
+16:37:23.975 > Z_EVENT,14,208844272,-7334
+16:37:23.975 > Z_EVENT,15,208848352,-7329
+16:37:23.979 > Z_EVENT,16,208853364,-7329
+16:37:23.979 > Z_EVENT,17,208858680,-7330
+16:37:23.983 > Z_EVENT,18,208861556,-7333
+16:37:23.983 > Z_EVENT,19,208864008,-7329
+16:37:23.987 > Z_EVENT,20,208866528,-7333
+16:37:23.992 > Z_EVENT,21,208868800,-7329
+16:37:23.992 > Z_EVENT,22,208871924,-7334
+16:37:23.996 > Z_EVENT,23,208874420,-7330
+16:37:23.996 > Z_EVENT,24,208878648,-7334

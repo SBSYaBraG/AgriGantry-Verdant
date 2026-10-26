@@ -12,6 +12,18 @@ static void setTestDirection(bool forward) {
   delayMicroseconds(DIRECTION_SETUP_US);
 }
 
+// The bench TB6600 uses ENA as an active-low offline input. This mirrors the
+// tested Motors_ICL behavior: disable/free the shaft at idle, energize it only
+// immediately before a commanded move, then disable it again afterwards.
+static void enableTestMotor() {
+  digitalWrite(TB6600_ENA_PIN, LOW);
+  delay(ENABLE_STABILIZATION_MS);
+}
+
+static void disableTestMotor() {
+  digitalWrite(TB6600_ENA_PIN, HIGH);
+}
+
 static void sendStepPulse(unsigned long periodUs) {
   digitalWrite(TB6600_PUL_PIN, HIGH);
   delayMicroseconds(PULSE_HIGH_US);
@@ -46,18 +58,18 @@ static void finishResult(EncMoveResult& result) {
 void initializeEncMotorControl() {
   pinMode(TB6600_PUL_PIN, OUTPUT);
   pinMode(TB6600_DIR_PIN, OUTPUT);
-
-  // ENA is intentionally not used. A high-impedance input leaves the TB6600
-  // enable terminals inactive, avoiding assumptions about clone-specific polarity.
-  pinMode(TB6600_ENA_PIN, INPUT);
+  pinMode(TB6600_ENA_PIN, OUTPUT);
 
   digitalWrite(TB6600_PUL_PIN, LOW);
   digitalWrite(TB6600_DIR_PIN, !FORWARD_DIR_LEVEL);
+  disableTestMotor();
 }
 
 EncMoveResult moveEncMotorConstant(long pulses, bool forward) {
-  EncMoveResult result = createResult(pulses, forward, EncMoveType::ConstantSpeed, CONSTANT_TEST_PPS);
   setTestDirection(forward);
+  enableTestMotor();
+  beginEncoderIndexEventCapture();
+  EncMoveResult result = createResult(pulses, forward, EncMoveType::ConstantSpeed, CONSTANT_TEST_PPS);
 
   const unsigned long periodUs = periodForPps(CONSTANT_TEST_PPS);
   for (long step = 0; step < pulses; step++) {
@@ -65,6 +77,8 @@ EncMoveResult moveEncMotorConstant(long pulses, bool forward) {
   }
 
   finishResult(result);
+  endEncoderIndexEventCapture();
+  disableTestMotor();
   return result;
 }
 
@@ -72,8 +86,10 @@ EncMoveResult moveEncMotorRamp(long pulses, bool forward, unsigned int targetPps
   if (targetPps < RAMP_START_PPS) targetPps = RAMP_START_PPS;
   if (targetPps > RAMP_MAX_PPS) targetPps = RAMP_MAX_PPS;
 
-  EncMoveResult result = createResult(pulses, forward, EncMoveType::Ramp, targetPps);
   setTestDirection(forward);
+  enableTestMotor();
+  beginEncoderIndexEventCapture();
+  EncMoveResult result = createResult(pulses, forward, EncMoveType::Ramp, targetPps);
 
   const long rampSteps = min(pulses / 4, 200L);
   for (long step = 0; step < pulses; step++) {
@@ -90,5 +106,7 @@ EncMoveResult moveEncMotorRamp(long pulses, bool forward, unsigned int targetPps
   }
 
   finishResult(result);
+  endEncoderIndexEventCapture();
+  disableTestMotor();
   return result;
 }

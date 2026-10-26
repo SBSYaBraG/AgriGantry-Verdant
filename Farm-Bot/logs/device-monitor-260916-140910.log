@@ -1,0 +1,174 @@
+
+============================================
+  17HS19-2004-ME1K ENCODER BENCH TEST
+============================================
+TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)
+AM26LV32E outputs: A D2, B D3, Z D18
+TB6600: 400 pulses/rev; current about 1.0 A RMS.
+Keep the shaft unloaded and clear before motion.
+
+ENCODER BENCH-TEST COMMANDS
+  STATUS              Show encoder inputs and measurements
+  ZERO                Reset encoder and index counts
+  TAG <label>         Label the next capture (letters, digits, _ or -)
+  F <pulses>          Forward constant-speed move (100 PPS)
+  R <pulses>          Reverse constant-speed move (100 PPS)
+  RF <pulses> <pps>   Forward move with accel/decel
+  RR <pulses> <pps>   Reverse move with accel/decel
+  HELP                Show this command list
+
+CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+Move complete. Encoder delta: -8001 | expected magnitude: 8000 | magnitude error: 1
+ENC_LOG,1,UNLABELED,CONSTANT,FORWARD,800,100,9317,0,-8001,-8001,8000,1,0,18
+Index delta: 18
+Move complete. Encoder delta: -4001 | expected magnitude: 4000 | magnitude error: 1
+ENC_LOG,2,UNLABELED,CONSTANT,FORWARD,400,100,4649,-8000,-12001,-4001,4000,1,18,25
+Index delta: 7
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: -4001 | expected magnitude: 4000 | magnitude error: 1
+ENC_LOG,3,UNLABELED,CONSTANT,FORWARD,400,100,4649,-10,-4011,-4001,4000,1,0,7
+Index delta: 7
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: -4002 | expected magnitude: 4000 | magnitude error: 2
+ENC_LOG,4,UNLABELED,CONSTANT,FORWARD,400,100,4646,-10,-4012,-4002,4000,2,0,8
+Index delta: 8
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,5,UNLABELED,CONSTANT,FORWARD,400,100,4031,-4003,-4003,0,4000,4000,161,161
+Index delta: 0
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,6,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,0
+Index delta: 0
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,7,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,18
+Index delta: 18
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,8,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,0
+Index delta: 0
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,9,UNLABELED,CONSTANT,FORWARD,400,100,4032,0,0,0,4000,4000,0,7
+Index delta: 7
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,10,UNLABELED,CONSTANT,FORWARD,400,100,4086,0,0,0,4000,4000,43,7898
+Index delta: 7855
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,11,UNLABELED,CONSTANT,FORWARD,400,100,4086,0,0,0,4000,4000,7961,15675
+Index delta: 7714
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,12,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+Index delta: 0
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,13,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,1
+Index delta: 1
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,14,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,9
+Index delta: 9
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,15,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,5
+Index delta: 5
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,16,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,1
+Index delta: 1
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,17,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+Index delta: 0
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,18,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,5,6
+Index delta: 1
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,19,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,6,6
+Index delta: 0
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,20,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,6,6
+Index delta: 0
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,21,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,6,6
+Index delta: 0
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,22,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,6,6
+Index delta: 0
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,23,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+Index delta: 0
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,24,UNLABELED,CONSTANT,FORWARD,400,100,4032,0,0,0,4000,4000,0,0
+Index delta: 0
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,25,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,0
+Index delta: 0
+ERROR: Pulses must be a positive whole number.
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,26,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,1
+Index delta: 1
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,27,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,1,2
+Index delta: 1
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,28,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,0
+Index delta: 0
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,29,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,1
+Index delta: 1
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,30,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,1,7
+Index delta: 6
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,31,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,7,11
+Index delta: 4
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,32,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,2
+Index delta: 2
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,33,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,2,2
+Index delta: 0
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,34,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,2
+Index delta: 2
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,35,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,2,4
+Index delta: 2
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,36,UNLABELED,CONSTANT,FORWARD,400,100,4031,0,0,0,4000,4000,0,3
+Index delta: 3
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,37,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,3
+Index delta: 3
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,38,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,3,6
+Index delta: 3
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,39,UNLABELED,CONSTANT,FORWARD,400,100,4030,0,0,0,4000,4000,0,1
+Index delta: 1
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,40,UNLABELED,CONSTANT,FORWARD,400,100,4034,0,0,0,4000,4000,16,522
+Index delta: 506
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,41,UNLABELED,CONSTANT,FORWARD,400,100,4035,0,0,0,4000,4000,21,551
+Index delta: 530
+Encoder and index counts reset to zero.
+Encoder and index counts reset to zero.
+Move complete. Encoder delta: 0 | expected magnitude: 4000 | magnitude error: 4000
+ENC_LOG,42,UNLABELED,CONSTANT,FORWARD,400,100,4034,0,0,0,4000,4000,70,669
+Index delta: 599
