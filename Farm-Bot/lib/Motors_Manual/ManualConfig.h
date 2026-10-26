@@ -43,12 +43,18 @@ constexpr uint16_t MANUAL_JOG_HEARTBEAT_MS = 350;
 constexpr uint16_t MANUAL_ENDPOINT_IDLE_MS = 2000;
 constexpr long MANUAL_MIN_CALIBRATION_STEPS = 100;
 
-// Calibration is intentionally on the cautious side. Normal percentage moves
-// use a cruise rate comparable to the old ICL 80 us minimum-step-delay mode.
-constexpr float MANUAL_CALIBRATION_CRUISE_PPS = 3500.0f;
-constexpr float MANUAL_CALIBRATION_ACCEL_PPS2 = 3000.0f;
-constexpr float MANUAL_CALIBRATION_DECEL_PPS2 = 3500.0f;
-constexpr float MANUAL_NORMAL_CRUISE_PPS = 12000.0f;
+// Deliberately conservative axis-specific cruise speeds. Jogging during
+// calibration uses the lower set; percentage moves (and the midpoint return)
+// use the normal set. Acceleration/deceleration remains ramped below so every
+// pulse during a release/stop is still commanded and counted.
+constexpr float MANUAL_CALIBRATION_X_CRUISE_PPS = 2500.0f;
+constexpr float MANUAL_CALIBRATION_Y_CRUISE_PPS = 2000.0f;
+constexpr float MANUAL_CALIBRATION_Z_CRUISE_PPS = 1500.0f;
+constexpr float MANUAL_CALIBRATION_ACCEL_PPS2 = 2200.0f;
+constexpr float MANUAL_CALIBRATION_DECEL_PPS2 = 2500.0f;
+constexpr float MANUAL_NORMAL_X_CRUISE_PPS = 3000.0f;
+constexpr float MANUAL_NORMAL_Y_CRUISE_PPS = 2500.0f;
+constexpr float MANUAL_NORMAL_Z_CRUISE_PPS = 1800.0f;
 constexpr float MANUAL_NORMAL_ACCEL_PPS2 = 10000.0f;
 constexpr float MANUAL_NORMAL_DECEL_PPS2 = 12000.0f;
 constexpr float MANUAL_MIN_TARGET_PPS = 150.0f;
@@ -69,6 +75,24 @@ inline char manualAxisName(ManualAxis axis) {
 inline ManualAxis manualAxisFromChar(char value) {
   return value == 'X' ? ManualAxis::X : value == 'Y' ? ManualAxis::Y
       : value == 'Z' ? ManualAxis::Z : ManualAxis::NONE;
+}
+
+inline float manualCalibrationCruisePps(ManualAxis axis) {
+  switch (axis) {
+    case ManualAxis::X: return MANUAL_CALIBRATION_X_CRUISE_PPS;
+    case ManualAxis::Y: return MANUAL_CALIBRATION_Y_CRUISE_PPS;
+    case ManualAxis::Z: return MANUAL_CALIBRATION_Z_CRUISE_PPS;
+    default: return 0.0f;
+  }
+}
+
+inline float manualNormalCruisePps(ManualAxis axis) {
+  switch (axis) {
+    case ManualAxis::X: return MANUAL_NORMAL_X_CRUISE_PPS;
+    case ManualAxis::Y: return MANUAL_NORMAL_Y_CRUISE_PPS;
+    case ManualAxis::Z: return MANUAL_NORMAL_Z_CRUISE_PPS;
+    default: return 0.0f;
+  }
 }
 
 #endif

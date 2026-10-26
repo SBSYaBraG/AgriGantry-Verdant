@@ -25,6 +25,10 @@ struct AxisCalibration {
 AxisCalibration calibration[4] = {};
 ManualAxis selectedAxis = ManualAxis::NONE;
 CalibrationStage stage = CalibrationStage::READY;
+enum class HomeAllStage : uint8_t { IDLE, MOVING };
+HomeAllStage homeAllStage = HomeAllStage::IDLE;
+constexpr ManualAxis homeAllOrder[] = {ManualAxis::X, ManualAxis::Y, ManualAxis::Z};
+uint8_t homeAllIndex = 0;
 int8_t firstSeekDirection = 0;
 unsigned long stoppedAtMs = 0;
 
@@ -37,6 +41,8 @@ bool isOngoingCalibration() {
       stage == CalibrationStage::MEASURE_SECOND_END ||
       stage == CalibrationStage::SECOND_END_CANDIDATE;
 }
+
+bool homeAllInProgress() { return homeAllStage != HomeAllStage::IDLE; }
 
 const __FlashStringHelper* stageName(CalibrationStage value) {
   switch (value) {
@@ -65,16 +71,45 @@ bool commandAllowed(ManualAxis axis) {
   return true;
 }
 
+bool startPercentMove(ManualAxis axis, uint8_t percent) {
+  AxisCalibration& data = calibration[axisIndex(axis)];
+  const long distance = static_cast<long>((static_cast<int64_t>(data.travelSteps) * percent + 50) / 100);
+  const long target = distance * data.towardMaximumDirection;
+  if (!manualMotionRequestTarget(axis, target)) return false;
+  selectedAxis = axis;
+  stage = CalibrationStage::COMPLETE;
+  Serial.print(F("TARGET "));
+  Serial.print(manualAxisName(axis));
+  Serial.print(F(" percent="));
+  Serial.println(percent);
+  return true;
+}
+
+bool startNextHomeAllAxis() {
+  const ManualAxis axis = homeAllOrder[homeAllIndex];
+  if (startPercentMove(axis, 50)) return true;
+  Serial.print(F("HOME_ALL_ABORTED: could not start "));
+  Serial.println(manualAxisName(axis));
+  homeAllStage = HomeAllStage::IDLE;
+  return false;
+}
+
 }  // namespace
 
 void manualCalibrationBegin() {
   for (uint8_t i = static_cast<uint8_t>(ManualAxis::X); i <= static_cast<uint8_t>(ManualAxis::Z); ++i) {
     calibration[i] = {0, 1, false, false};
   }
+  homeAllStage = HomeAllStage::IDLE;
+  homeAllIndex = 0;
 }
 
 bool manualCalibrationSelect(ManualAxis axis) {
   if (!commandAllowed(axis) || !manualMotionIsIdle()) return false;
+  if (homeAllInProgress()) {
+    Serial.println(F("ERR: HOME ALL is in progress"));
+    return false;
+  }
   if (isOngoingCalibration()) {
     Serial.println(F("ERR: finish or cancel the active calibration first"));
     return false;
@@ -105,6 +140,10 @@ bool manualCalibrationStart(ManualAxis axis) {
 
 bool manualCalibrationJog(ManualAxis axis, int8_t direction) {
   if (!commandAllowed(axis) || axis != selectedAxis || direction < -1 || direction > 1) return false;
+  if (homeAllInProgress()) {
+    Serial.println(F("ERR: HOME ALL is in progress"));
+    return false;
+  }
 
   if (direction == 0) {
     if (stage == CalibrationStage::SEEK_FIRST_END || stage == CalibrationStage::MEASURE_SECOND_END ||
@@ -174,6 +213,29 @@ bool manualCalibrationJog(ManualAxis axis, int8_t direction) {
 }
 
 void manualCalibrationUpdate() {
+  if (homeAllInProgress()) {
+    if (manualSafetyHasFault()) {
+      homeAllStage = HomeAllStage::IDLE;
+      return;
+    }
+    if (!manualMotionIsIdle()) return;
+    if (!manualMotionLastTargetReached()) {
+      Serial.print(F("HOME_ALL_ABORTED: "));
+      Serial.print(manualAxisName(homeAllOrder[homeAllIndex]));
+      Serial.println(F(" did not reach 50%"));
+      homeAllStage = HomeAllStage::IDLE;
+      return;
+    }
+    ++homeAllIndex;
+    if (homeAllIndex >= sizeof(homeAllOrder) / sizeof(homeAllOrder[0])) {
+      homeAllStage = HomeAllStage::IDLE;
+      Serial.println(F("HOME_ALL_COMPLETE: X, Y, and Z are at stored 50% midpoints"));
+      return;
+    }
+    startNextHomeAllAxis();
+    return;
+  }
+
   if (manualSafetyHasFault() || !isOngoingCalibration()) return;
   if (stage != CalibrationStage::SEEK_FIRST_END && stage != CalibrationStage::MEASURE_SECOND_END) return;
   if (!manualMotionIsIdle()) {
@@ -229,7 +291,7 @@ bool manualCalibrationConfirmEndpoint() {
   Serial.print(manualAxisName(selectedAxis));
   Serial.print(F(" travel_steps="));
   Serial.println(measuredTravel);
-  Serial.println(F("Use HOME <axis> or P<axis>10/25/50/75/90. Jogging is now locked."));
+  Serial.println(F("Use HOME <axis> for 50% or P<axis>10/25/50/75/90. Jogging is now locked."));
   // TODO: persist only the confirmed travel length with a version/CRC. Never
   // trust the current position after power loss without a new reference/home.
   return true;
@@ -254,30 +316,47 @@ bool manualCalibrationCancelEndpoint() {
 
 bool manualCalibrationMovePercent(ManualAxis axis, uint8_t percent) {
   if (!commandAllowed(axis) || !manualMotionIsIdle() || isOngoingCalibration()) return false;
+  if (homeAllInProgress()) {
+    Serial.println(F("ERR: HOME ALL is in progress"));
+    return false;
+  }
   if (percent != 0 && percent != 10 && percent != 25 && percent != 50 &&
       percent != 75 && percent != 90 && percent != 100) {
     Serial.println(F("ERR: use 0, 10, 25, 50, 75, 90, or 100 percent"));
     return false;
   }
-  AxisCalibration& data = calibration[axisIndex(axis)];
+  const AxisCalibration& data = calibration[axisIndex(axis)];
   if (!data.rangeKnown || !data.positionKnown) {
     Serial.println(F("ERR: axis has no trusted manual calibration in this power session"));
     return false;
   }
-  const long distance = static_cast<long>((static_cast<int64_t>(data.travelSteps) * percent + 50) / 100);
-  const long target = distance * data.towardMaximumDirection;
-  if (!manualMotionRequestTarget(axis, target)) return false;
-  selectedAxis = axis;
-  stage = CalibrationStage::COMPLETE;
-  Serial.print(F("TARGET "));
-  Serial.print(manualAxisName(axis));
-  Serial.print(F(" percent="));
-  Serial.println(percent);
-  return true;
+  return startPercentMove(axis, percent);
 }
 
 bool manualCalibrationHome(ManualAxis axis) {
-  return manualCalibrationMovePercent(axis, 0);
+  // In this manual-calibration firmware HOME is deliberately a safe midpoint
+  // return, not a physical hardstop search. C performs the endpoint routine.
+  return manualCalibrationMovePercent(axis, 50);
+}
+
+bool manualCalibrationHomeAll() {
+  if (manualSafetyHasFault() || !manualMotionIsIdle() || isOngoingCalibration() || homeAllInProgress()) {
+    Serial.println(F("ERR: cannot start HOME ALL while motion, calibration, or a fault is active"));
+    return false;
+  }
+  for (uint8_t i = 0; i < sizeof(homeAllOrder) / sizeof(homeAllOrder[0]); ++i) {
+    const ManualAxis axis = homeAllOrder[i];
+    const AxisCalibration& data = calibration[axisIndex(axis)];
+    if (!data.rangeKnown || !data.positionKnown) {
+      Serial.print(F("ERR: HOME ALL requires a current-session calibration for "));
+      Serial.println(manualAxisName(axis));
+      return false;
+    }
+  }
+  homeAllIndex = 0;
+  homeAllStage = HomeAllStage::MOVING;
+  Serial.println(F("HOME_ALL_BEGIN: returning X, then Y, then Z to 50%"));
+  return startNextHomeAllAxis();
 }
 
 ManualAxis manualCalibrationSelectedAxis() { return selectedAxis; }
@@ -292,6 +371,13 @@ void manualCalibrationPrintStatus() {
   Serial.print(stageName(stage));
   Serial.print(F(" | selected="));
   Serial.println(manualAxisName(selectedAxis));
+  Serial.print(F("HOME_ALL="));
+  if (homeAllInProgress()) {
+    Serial.print(F("MOVING "));
+    Serial.println(manualAxisName(homeAllOrder[homeAllIndex]));
+  } else {
+    Serial.println(F("idle"));
+  }
   for (uint8_t i = static_cast<uint8_t>(ManualAxis::X); i <= static_cast<uint8_t>(ManualAxis::Z); ++i) {
     const ManualAxis axis = static_cast<ManualAxis>(i);
     const AxisCalibration& data = calibration[i];

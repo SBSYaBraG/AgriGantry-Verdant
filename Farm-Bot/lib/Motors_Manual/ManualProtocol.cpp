@@ -61,6 +61,8 @@ void processCommand(char* command) {
     manualCalibrationSelect(parseAxisAfter(command, 6));
   } else if (strncmp(command, "CAL", 3) == 0) {
     manualCalibrationStart(parseAxisAfter(command, 3));
+  } else if (strcmp(command, "HOME ALL") == 0) {
+    manualCalibrationHomeAll();
   } else if (strncmp(command, "HOME", 4) == 0) {
     manualCalibrationHome(parseAxisAfter(command, 4));
   } else if (command[0] == 'J' && manualIsAxis(manualAxisFromChar(command[1]))) {
@@ -93,7 +95,8 @@ void manualProtocolPrintHelp() {
   Serial.println(F("JX0/JY0/JZ0 or STOP: controlled stop"));
   Serial.println(F("CONFIRM / CANCEL: accept or reject the 2-second endpoint prompt"));
   Serial.println(F("PX10/PX25/PX50/PX75/PX90: move a calibrated axis"));
-  Serial.println(F("HOME X|Y|Z: move to stored 0%, not physical auto-homing"));
+  Serial.println(F("HOME X|Y|Z: move to stored 50%, not physical auto-homing"));
+  Serial.println(F("HOME ALL: return calibrated X, then Y, then Z to stored 50%"));
   Serial.println(F("O or ESTOP: immediate latched stop; CLEAR only after ALM is normal"));
   Serial.println(F("STATUS, ALM, ?, HELP"));
 }

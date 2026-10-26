@@ -1,0 +1,21 @@
+12:11:11.973 > 
+12:11:11.973 > ============================================
+12:11:12.021 >   17HS19-2004-ME1K ENCODER BENCH TEST
+12:11:12.037 > ============================================
+12:11:12.050 > TB6600: PUL D4, DIR D5, ENA D6 (LOW move / HIGH idle)
+12:11:12.054 > AM26LV32E outputs: A D2, B D3, Z D18
+12:11:12.058 > TB6600: 1600 pulses/rev; current about 1.0 A RMS.
+12:11:12.066 > Keep the shaft unloaded and clear before motion.
+12:11:12.071 > 
+12:11:12.071 > ENCODER BENCH-TEST COMMANDS
+12:11:12.071 >   STATUS              Show encoder inputs and measurements
+12:11:12.079 >   ZERO                Reset encoder and index counts
+12:11:12.083 >   TAG <label>         Label the next capture (letters, digits, _ or -)
+12:11:12.087 >   F <pulses>          Forward constant-speed move (100 PPS)
+12:11:12.091 >   R <pulses>          Reverse constant-speed move (100 PPS)
+12:11:12.099 >   RF <pulses> <pps>   Forward move with accel/decel
+12:11:12.103 >   RR <pulses> <pps>   Reverse move with accel/decel
+12:11:12.107 >   HELP                Show this command list
+12:11:12.112 > 
+12:11:12.112 > CSV format: ENC_LOG,sequence,capture_label,type,direction,command_pulses,target_pps,duration_ms,encoder_before,encoder_after,encoder_delta,expected_magnitude,magnitude_error,index_before,index_after
+12:11:12.128 > CSV format: Z_EVENT,sequence,time_us,encoder_count

@@ -12,6 +12,7 @@ bool manualCalibrationConfirmEndpoint();
 bool manualCalibrationCancelEndpoint();
 bool manualCalibrationMovePercent(ManualAxis axis, uint8_t percent);
 bool manualCalibrationHome(ManualAxis axis);
+bool manualCalibrationHomeAll();
 ManualAxis manualCalibrationSelectedAxis();
 bool manualCalibrationAxisReady(ManualAxis axis);
 void manualCalibrationPrintStatus();

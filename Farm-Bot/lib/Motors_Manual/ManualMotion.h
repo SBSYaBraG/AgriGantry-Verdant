@@ -18,6 +18,9 @@ void manualMotionClearEmergency();
 
 bool manualMotionIsIdle();
 bool manualMotionEmergencyActive();
+// Valid after a target move has become idle. False means it was stopped or
+// interrupted before reaching its requested coordinate.
+bool manualMotionLastTargetReached();
 ManualAxis manualMotionActiveAxis();
 long manualMotionGetPosition(ManualAxis axis);
 void manualMotionSetPosition(ManualAxis axis, long position);

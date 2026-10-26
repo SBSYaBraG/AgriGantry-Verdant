@@ -6,8 +6,9 @@ Run from Farm-Bot after uploading the megaatmega2560-manual-calibration target:
 F1/F2/F3 select X/Y/Z. C begins calibration of the selected axis. During
 calibration hold A/D for X, Left/Right for Y, and W/S for Z. Enter confirms an
 endpoint after its two-second prompt; Backspace rejects that prompt. After an
-axis is calibrated: 1/2/3/4/5 move it to 10/25/50/75/90%, and H moves it to
-the stored 0% coordinate. Space requests a controlled stop; O or Esc latches
+axis is calibrated: 1/2/3/4/5 move it to 10/25/50/75/90%, H moves the selected
+axis to its stored 50% midpoint, and G returns all calibrated axes to 50%.
+Space requests a controlled stop; O or Esc latches
 an emergency stop. L clears a stop only after every ALM line is normal.
 """
 
@@ -37,7 +38,7 @@ HELP = """\
 F1/F2/F3: select X/Y/Z       C: begin/repeat manual calibration
 Hold A/D: X                  Hold Left/Right: Y       Hold W/S: Z
 Enter: confirm endpoint      Backspace: reject endpoint prompt
-1/2/3/4/5: 10/25/50/75/90%  H: stored 0% (not physical auto-home)
+1/2/3/4/5: 10/25/50/75/90%  H: selected axis to 50%   G: all axes to 50%
 Space: controlled stop       O or Esc: EMERGENCY STOP  L: clear after ALM is OK
 P: status. The controller must remain running while a jog key is held.
 """
@@ -123,6 +124,8 @@ class KeyboardController:
                 self.send(f"CAL {self.selected_axis}")
             elif name == "h":
                 self.send(f"HOME {self.selected_axis}")
+            elif name == "g":
+                self.send("HOME ALL")
             elif name == "enter":
                 self.send("CONFIRM")
             elif name == "backspace":

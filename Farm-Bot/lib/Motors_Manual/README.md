@@ -20,8 +20,10 @@ four-driver wiring, not `Motors_ICL`'s older pin assignments:
   all drivers.
 - While calibrating, one axis may jog only while its keyboard key is held.
 - After calibration, jogging is locked. Use percentage commands or `HOME`.
-- `HOME` moves to the measured software 0%; it never drives into a physical
-  endpoint and is not automatic homing.
+- `HOME` moves to the measured software 50% midpoint; it never drives into a
+  physical endpoint and is not automatic homing.
+- `HOME ALL` returns X, then Y, then Z to their 50% midpoints. It refuses to
+  start unless all three axes were calibrated in this same power session.
 
 ## Calibration flow
 
@@ -48,6 +50,8 @@ python scripts/manual_keyboard_controller.py --port COM9
 Keyboard controls: `F1`/`F2`/`F3` select X/Y/Z, `C` begins calibration,
 `A`/`D` jog X, Left/Right jog Y, `W`/`S` jog Z, Enter confirms an endpoint,
 and `1`–`5` request 10/25/50/75/90% on the selected calibrated axis.
+
+`H` returns the selected calibrated axis to 50%. `G` sends `HOME ALL`.
 
 ## Future work
 

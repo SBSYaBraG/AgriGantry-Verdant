@@ -22,6 +22,7 @@ volatile bool targetActive = false;
 volatile long targetPosition = 0;
 volatile bool targetReached = false;
 bool targetCancelled = false;
+bool lastTargetReached = false;
 volatile bool emergencyActive = false;
 volatile ManualAxis timerAxis = ManualAxis::NONE;
 
@@ -94,6 +95,7 @@ void finishMotion(bool reachedTarget) {
   setPulseRate(0.0f);
   targetActive = false;
   targetReached = false;
+  lastTargetReached = reachedTarget;
   currentSpeed = 0.0f;
   requestedDirection = 0;
   mode = MotionMode::IDLE;
@@ -120,8 +122,9 @@ bool startMotion(ManualAxis axis, MotionMode nextMode, int8_t direction, long ta
   targetPosition = target;
   targetReached = false;
   targetCancelled = false;
+  lastTargetReached = false;
   targetActive = nextMode == MotionMode::TARGET;
-  cruiseSpeed = nextMode == MotionMode::JOG ? MANUAL_CALIBRATION_CRUISE_PPS : MANUAL_NORMAL_CRUISE_PPS;
+  cruiseSpeed = nextMode == MotionMode::JOG ? manualCalibrationCruisePps(axis) : manualNormalCruisePps(axis);
   acceleration = nextMode == MotionMode::JOG ? MANUAL_CALIBRATION_ACCEL_PPS2 : MANUAL_NORMAL_ACCEL_PPS2;
   deceleration = nextMode == MotionMode::JOG ? MANUAL_CALIBRATION_DECEL_PPS2 : MANUAL_NORMAL_DECEL_PPS2;
   setDirection(axis, direction);
@@ -263,6 +266,7 @@ bool manualMotionRequestTarget(ManualAxis axis, long rawTargetPosition) {
   if (!manualIsAxis(axis) || emergencyActive || mode != MotionMode::IDLE) return false;
   const long position = manualMotionGetPosition(axis);
   if (position == rawTargetPosition) {
+    lastTargetReached = true;
     Serial.print(F("ALREADY_AT_TARGET "));
     Serial.println(manualAxisName(axis));
     return true;
@@ -296,6 +300,7 @@ void manualMotionEmergencyStop() {
     targetActive = false;
     targetReached = false;
   }
+  lastTargetReached = false;
   currentSpeed = 0.0f;
   requestedDirection = 0;
   mode = MotionMode::IDLE;
@@ -310,6 +315,7 @@ void manualMotionClearEmergency() {
 
 bool manualMotionIsIdle() { return mode == MotionMode::IDLE; }
 bool manualMotionEmergencyActive() { return emergencyActive; }
+bool manualMotionLastTargetReached() { return lastTargetReached; }
 ManualAxis manualMotionActiveAxis() { return activeAxis; }
 
 long manualMotionGetPosition(ManualAxis axis) {

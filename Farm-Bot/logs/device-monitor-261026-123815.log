@@ -1,0 +1,17 @@
+12:38:16.215 > 
+12:38:16.215 > FarmBot manual calibration controller
+12:38:16.219 > FARMBOT-MANUAL-CAL-v1
+12:38:16.223 > Drivers are DISABLED. No automatic homing or startup motion.
+12:38:16.227 > Use the PC keyboard controller: select an axis, then press C to calibrate.
+12:38:16.235 > MANUAL CALIBRATION COMMANDS
+12:38:16.235 > CAL X|Y|Z: begin manual endpoint calibration
+12:38:16.240 > JX-1/JX1, JY-1/JY1, JZ-1/JZ1: hold-to-jog during calibration
+12:38:16.244 > JX0/JY0/JZ0 or STOP: controlled stop
+12:38:16.248 > CONFIRM / CANCEL: accept or reject the 2-second endpoint prompt
+12:38:16.256 > PX10/PX25/PX50/PX75/PX90: move a calibrated axis
+12:38:16.260 > HOME X|Y|Z: move to stored 0%, not physical auto-homing
+12:38:16.264 > O or ESTOP: immediate latched stop; CLEAR only after ALM is normal
+12:38:16.268 > STATUS, ALM, ?, HELP
+12:38:19.119 > SELECTED_AXIS X
+12:38:19.123 > CALIBRATION_BEGIN X
+12:38:19.123 > Jog toward either endpoint, release, wait 2 seconds, then press Enter.
