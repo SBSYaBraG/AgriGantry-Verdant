@@ -1,0 +1,34 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# ---- PlatformIO (Arduino build output) ----
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# ---- macOS ----
+.DS_Store
+# AppleDouble resource-fork files. These appear in their hundreds when the
+# repo lives on an exFAT/network volume (such as the T7 drive) and will break
+# git outright if they land in .git/objects.
+._*
+
+# ---- Editors ----
+.vscode/
+.idea/
+
+# The PlatformIO project intentionally shares its editor configuration. Keep
+# this exception below the general editor rule so the firmware project remains
+# reproducible while unrelated workspace settings stay local.
+!Firmware/.vscode/
+!Firmware/.vscode/**
+
+# ---- AI model artifacts ----
+# Trained models are large binaries; keep them out of git history.
+*.h5
+*.keras

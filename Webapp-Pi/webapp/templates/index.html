@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- user-scalable=no stops an accidental pinch-zoom while jabbing at
+       controls, which matters on a touchscreen in a greenhouse. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AgriGantry Control</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- ============================================================
+       TOP BAR
+       ============================================================ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <h1>AgriGantry<span class="brand-light"> Control</span></h1>
+    </div>
+    <div class="topbar-status">
+      <!-- Says SIMULATED when no real hardware is attached. Always visible:
+           the same interface will one day move real motors and the operator
+           should never have to guess which they are looking at. -->
+      <span id="mode-badge" class="badge badge-sim">SIMULATED</span>
+      <span class="conn">
+        <span id="conn-dot" class="dot dot-off"></span>
+        <span id="conn-text">Connecting…</span>
+      </span>
+    </div>
+  </header>
+
+  <div id="estop-banner" class="banner banner-estop hidden">
+    EMERGENCY STOP ACTIVE — motion halted. Press RESUME to re-enable controls.
+  </div>
+  <div id="alm-banner" class="banner banner-alm hidden">
+    MOTOR ALARM — ALL MACHINE MOVEMENT IS HALTED until every ALM is cleared.
+  </div>
+
+  <main class="layout">
+
+    <!-- ============================================================
+         THE MACHINE. The wide panel is the centrepiece of the page.
+         ============================================================ -->
+    <section class="panel panel-scene">
+      <div class="scene-head">
+        <h2>Machine View</h2>
+        <div class="scene-tools">
+          <button id="btn-toggle-view" class="btn btn-small" aria-pressed="false">3D VIEW: OFF</button>
+          <button id="btn-reset-view" class="btn btn-small" disabled>RESET VIEW</button>
+        </div>
+      </div>
+
+      <div id="scene-frame" class="scene-frame view-disabled">
+        <div id="scene-container" class="scene-container"></div>
+        <div id="scene-status" class="scene-status">3D view is off</div>
+
+        <!-- A compact CAD-style navigation cube. Click a face for an
+             orthogonal view or a corner for the matching diagonal view. -->
+        <div id="view-cube" class="view-cube is-hidden" aria-label="Camera view selector" aria-hidden="true">
+          <div id="view-cube-body" class="view-cube-body" aria-label="Select a camera view">
+            <button class="view-cube-face cube-front" type="button" data-view="front">FRONT</button>
+            <button class="view-cube-face cube-back" type="button" data-view="back">BACK</button>
+            <button class="view-cube-face cube-left" type="button" data-view="left">LEFT</button>
+            <button class="view-cube-face cube-right" type="button" data-view="right">RIGHT</button>
+            <button class="view-cube-face cube-top" type="button" data-view="top">TOP</button>
+            <button class="view-cube-face cube-bottom" type="button" data-view="bottom">BOTTOM</button>
+            <button class="view-cube-corner corner-tfr" type="button" data-view="top-front-right" aria-label="Top front right isometric view"></button>
+            <button class="view-cube-corner corner-tfl" type="button" data-view="top-front-left" aria-label="Top front left isometric view"></button>
+            <button class="view-cube-corner corner-tbr" type="button" data-view="top-back-right" aria-label="Top back right isometric view"></button>
+            <button class="view-cube-corner corner-tbl" type="button" data-view="top-back-left" aria-label="Top back left isometric view"></button>
+            <button class="view-cube-corner corner-bfr" type="button" data-view="bottom-front-right" aria-label="Bottom front right isometric view"></button>
+            <button class="view-cube-corner corner-bfl" type="button" data-view="bottom-front-left" aria-label="Bottom front left isometric view"></button>
+            <button class="view-cube-corner corner-bbr" type="button" data-view="bottom-back-right" aria-label="Bottom back right isometric view"></button>
+            <button class="view-cube-corner corner-bbl" type="button" data-view="bottom-back-left" aria-label="Bottom back left isometric view"></button>
+          </div>
+        </div>
+
+        <!-- ========================================================
+             MINIMAP, in the corner of the scene.
+
+             A perspective camera is a poor way to judge exactly where the
+             tool head sits over the bed. This gives that back at a glance,
+             and being small and circular it reads as an instrument rather
+             than competing with the machine behind it.
+             ======================================================== -->
+        <div class="minimap">
+          <div class="minimap-dial">
+            <!-- The bed, drawn to the machine's true proportions by JS. -->
+            <div id="mini-bed" class="mini-bed">
+              <div id="mini-gantry" class="mini-gantry"></div>
+              <div id="mini-tool" class="mini-tool"></div>
+            </div>
+            <div class="minimap-home">H</div>
+          </div>
+          <div class="minimap-readout">
+            <span id="mini-x">X —</span>
+            <span id="mini-y">Y —</span>
+            <span id="mini-z">Z —</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================
+         CONTROL DECK
+         ============================================================ -->
+    <!-- On a wide screen this becomes its own scrolling region, independent
+         of the machine view beside it. See APP SHELL in style.css. -->
+    <aside class="deck">
+
+      <!-- Safety first in the markup so that on a phone, where the layout
+           stacks, the emergency stop stays near the top. -->
+      <div class="panel panel-safety">
+        <button id="btn-estop" class="btn btn-estop">EMERGENCY&nbsp;STOP</button>
+        <button id="btn-resume" class="btn btn-resume">RESUME</button>
+      </div>
+
+      <div class="panel">
+        <h2>Homing</h2>
+        <p class="hint">Axes must be homed before they will accept moves.</p>
+        <button id="btn-home-all" class="btn btn-primary btn-wide">HOME ALL AXES</button>
+      </div>
+
+      <!-- Per-axis controls are generated from /api/config, so resizing or
+           renaming an axis there updates this with no edits here. -->
+      <div id="axis-controls"></div>
+
+      <div class="panel">
+        <h2>Motor Alarms</h2>
+        <div id="alm-lights" class="alm-lights"></div>
+      </div>
+
+      <details class="panel panel-dev">
+        <summary>Developer Tools (simulation only)</summary>
+        <p class="hint">
+          Inject fake faults to test the alarm display. No equivalent on real
+          hardware.
+        </p>
+        <div id="dev-alm-buttons" class="dev-buttons"></div>
+        <button id="btn-clear-alm" class="btn btn-small">Clear all alarms</button>
+      </details>
+    </aside>
+  </main>
+
+  <!-- ============================================================
+       EVENT LOG: mirrors the messages the Arduino prints over serial.
+       ============================================================ -->
+  <section class="panel panel-log">
+    <h2>Event Log</h2>
+    <div id="log" class="log"></div>
+  </section>
+
+  <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+  <!-- three.js is loaded as ES modules. The import map lets scene3d.js write
+       `import ... from "three"` while the files are served from this server
+       rather than a CDN - the machine may sit on WiFi with no internet. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "{{ url_for('static', filename='vendor/three/three.module.min.js') }}",
+      "three/addons/loaders/GLTFLoader.js": "{{ url_for('static', filename='vendor/three/GLTFLoader.js') }}",
+      "three/addons/controls/OrbitControls.js": "{{ url_for('static', filename='vendor/three/OrbitControls.js') }}"
+    }
+  }
+  </script>
+
+  <script type="module">
+    const sceneModuleUrl = "{{ url_for('static', filename='js/scene3d.js') }}";
+    const modelUrl = "{{ url_for('static', filename='models/farmbot_model.glb') }}";
+    const frameEl = document.getElementById("scene-frame");
+    const statusEl = document.getElementById("scene-status");
+    const toggleButton = document.getElementById("btn-toggle-view");
+    const resetButton = document.getElementById("btn-reset-view");
+    const viewCube = document.getElementById("view-cube");
+    const cubeBody = document.getElementById("view-cube-body");
+    let scene3d = null;
+    let sceneReady = false;
+    let viewEnabled = false;
+
+    const cubePoses = {
+      iso: [-28, -38],
+      front: [0, 0],
+      back: [0, 180],
+      left: [0, 90],
+      right: [0, -90],
+      top: [-90, 0],
+      bottom: [90, 0],
+      "top-front-right": [-28, -38],
+      "top-front-left": [-28, 38],
+      "top-back-right": [-28, -142],
+      "top-back-left": [-28, 142],
+      "bottom-front-right": [28, -38],
+      "bottom-front-left": [28, 38],
+      "bottom-back-right": [28, -142],
+      "bottom-back-left": [28, 142]
+    };
+
+    function setCubeRotation(pitch, yaw, animated) {
+      cubeBody.classList.toggle("is-dragging", !animated);
+      // The corner controls represent spheres. Counter-rotate their flat CSS
+      // surfaces so a cube face turning edge-on never squashes them into thin
+      // ellipses; a sphere has a round silhouette from every camera angle.
+      cubeBody.style.setProperty("--cube-counter-pitch", (-pitch) + "deg");
+      cubeBody.style.setProperty("--cube-counter-yaw", (-yaw) + "deg");
+      cubeBody.style.transform =
+        "rotateX(" + pitch + "deg) rotateY(" + yaw + "deg)";
+    }
+
+    function showSelectedView(viewName) {
+      const pose = cubePoses[viewName] || cubePoses.iso;
+      setCubeRotation(pose[0], pose[1], true);
+      if (scene3d && sceneReady) { scene3d.setView(viewName); }
+    }
+
+    function selectCubeButton(button) {
+        const viewName = button.dataset.view;
+        const pose = cubePoses[viewName] || cubePoses.iso;
+        cubeBody.dataset.pitch = pose[0];
+        cubeBody.dataset.yaw = pose[1];
+        showSelectedView(viewName);
+    }
+
+    viewCube.querySelectorAll("[data-view]").forEach(function (button) {
+      // Transformed 3D buttons are not guaranteed to emit a normal click in
+      // every Chromium/touch combination. Pointer-down gives mouse and touch
+      // an immediate, dependable path. A detail-0 click keeps keyboard
+      // activation (Enter/Space) accessible without running the action twice.
+      button.addEventListener("pointerdown", function (event) {
+        event.preventDefault();
+        selectCubeButton(button);
+      });
+      button.addEventListener("click", function (event) {
+        if (event.detail === 0) { selectCubeButton(button); }
+      });
+    });
+
+    cubeBody.dataset.pitch = cubePoses["top-front-right"][0];
+    cubeBody.dataset.yaw = cubePoses["top-front-right"][1];
+    setCubeRotation(
+      cubePoses["top-front-right"][0],
+      cubePoses["top-front-right"][1],
+      true
+    );
+
+    async function enable3dView() {
+      viewEnabled = true;
+      frameEl.classList.remove("view-disabled");
+      toggleButton.textContent = "3D VIEW: ON";
+      toggleButton.setAttribute("aria-pressed", "true");
+      toggleButton.disabled = true;
+      statusEl.textContent = sceneReady ? "" : "Loading machine…";
+      statusEl.classList.remove("is-gone", "is-error");
+
+      try {
+        if (!scene3d) { scene3d = await import(sceneModuleUrl); }
+        if (!sceneReady) {
+          await scene3d.init(document.getElementById("scene-container"), modelUrl);
+          sceneReady = true;
+        }
+
+        // Hand over whatever has already arrived, so the machine is in the
+        // right pose on its first visible frame rather than snapping later.
+        if (window.farmbotConfig) { scene3d.setMachineConfig(window.farmbotConfig); }
+        if (window.farmbotStatus) { scene3d.update(window.farmbotStatus); }
+        scene3d.start();
+        statusEl.classList.add("is-gone");
+        resetButton.disabled = false;
+        viewCube.classList.remove("is-hidden");
+        viewCube.setAttribute("aria-hidden", "false");
+      } catch (err) {
+        viewEnabled = false;
+        statusEl.textContent = "Could not load the machine model: " + err.message;
+        statusEl.classList.add("is-error");
+        toggleButton.textContent = "RETRY 3D VIEW";
+        toggleButton.setAttribute("aria-pressed", "false");
+      } finally {
+        toggleButton.disabled = false;
+      }
+    }
+
+    function disable3dView() {
+      viewEnabled = false;
+      if (scene3d && sceneReady) { scene3d.stop(); }
+      frameEl.classList.add("view-disabled");
+      toggleButton.textContent = "3D VIEW: OFF";
+      toggleButton.setAttribute("aria-pressed", "false");
+      resetButton.disabled = true;
+      viewCube.classList.add("is-hidden");
+      viewCube.setAttribute("aria-hidden", "true");
+      statusEl.textContent = "3D view is off";
+      statusEl.classList.remove("is-gone", "is-error");
+    }
+
+    toggleButton.addEventListener("click", function () {
+      if (viewEnabled) { disable3dView(); }
+      else { enable3dView(); }
+    });
+
+    // app.js publishes each update on window; the 3D view picks them up here.
+    // The scene and the minimap therefore render from one identical payload
+    // and can never disagree about where the machine is.
+    window.addEventListener("farmbot:status", function (e) {
+      if (scene3d) { scene3d.update(e.detail); }
+    });
+    window.addEventListener("farmbot:config", function (e) {
+      if (scene3d) { scene3d.setMachineConfig(e.detail); }
+    });
+
+    resetButton.addEventListener("click", function () {
+      if (scene3d && sceneReady) {
+        scene3d.resetView();
+        const pose = cubePoses["top-front-right"];
+        cubeBody.dataset.pitch = pose[0];
+        cubeBody.dataset.yaw = pose[1];
+        setCubeRotation(pose[0], pose[1], true);
+      }
+    });
+  </script>
+</body>
+</html>
