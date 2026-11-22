@@ -1,0 +1,14 @@
+build
+mx.scratch
+!.settings
+
+# Toolchain output and local recovery copies
+*.elf
+*.hex
+*.bin
+*.map
+*.o
+*.obj
+*.d
+*.bak
+Core/**/Backup/

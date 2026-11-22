@@ -15,6 +15,7 @@ cannot be confused or built together by accident.
 | If you want to... | Start here | What it covers |
 | --- | --- | --- |
 | Operate or modify the Arduino firmware | [Firmware guide](Firmware/README.md) | PlatformIO targets, safe startup, manual calibration, keyboard controls, and testing boundaries. |
+| Work on the STM32G474 Rev1 controller | [STM32G474 firmware guide](Firmware/STM32G474/README.md) | CubeMX/CMake bring-up firmware and the starting point for Pi communication. |
 | Manually calibrate the installed iCL gantry | [Manual-calibration guide](Firmware/lib/Motors_Manual/README.md) | Pin map, endpoint workflow, safety behavior, and the keyboard controller. |
 | Test the replacement 17HS19 encoder motor | [Encoder bench-test guide](Firmware/lib/Motors_Enc/README.md) | Isolated TB6600, AM26LV32E, and encoder-measurement procedure. |
 | Continue the Pi scheduler, logs, or dashboard tab | [Pi integration contract](Webapp-Pi/MANUAL_CALIBRATION_INTEGRATION.md) | The planned Pi/Mega/browser responsibilities and safe endurance-test contract. |
@@ -46,7 +47,8 @@ against the Mega serial port at once.
 
 | Path | Purpose |
 | --- | --- |
-| `Firmware/` | PlatformIO project: Mega firmware, motion libraries, test utilities, live serial-monitor logs, and firmware changelog. |
+| `Firmware/` | Arduino Mega PlatformIO project: motion libraries, test utilities, live serial-monitor logs, and firmware changelog. |
+| `Firmware/STM32G474/` | STM32G474 Rev1 CubeMX/CMake bring-up firmware; separate from the Mega project. |
 | `Firmware/lib/Motors_ICL/` | Existing iCL driver control used by the normal program. |
 | `Firmware/lib/Motors_Manual/` | Safety-first manual endpoint calibration for the installed iCL system. |
 | `Firmware/lib/Motors_Enc/` | Isolated magnetic-encoder motor bench-test support. |
@@ -56,7 +58,7 @@ against the Mega serial port at once.
 | `Farmbot 3D Models/` and `models/` | Mechanical/CAD assets and reference models. |
 | `AI/` | Project AI/vision exploration assets. |
 
-## Firmware entry points
+## Arduino Mega firmware entry points
 
 The PlatformIO source filters intentionally compile one entry point at a time.
 Do not rely on the editor's active tab to select what gets uploaded.

@@ -1,9 +1,13 @@
 # AgriGantry firmware
 
-This directory is the PlatformIO project for the Arduino Mega 2560. It has
+This document covers the PlatformIO project for the Arduino Mega 2560. It has
 three intentionally separate firmware targets. Select the PlatformIO
 environment explicitly; opening a source file in VS Code does not determine
 what gets built or uploaded.
+
+The separate STM32G474 Rev1 bring-up project is in
+[`STM32G474/`](STM32G474/README.md) and uses STM32CubeMX/CMake rather than
+PlatformIO. Do not mix files or build products between the two projects.
 
 ## Choose the right firmware target
 
