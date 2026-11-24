@@ -2,6 +2,23 @@
 
 This file records main changes that affect the AgriGantry system design or operation.
 
+## 2026-11-24 — Rev. 1 control board and Raspberry Pi 3 bench validation
+
+- The board-powered Pi 3 programmed and verified Test 14 and Test 15 through OpenOCD, USB ST-LINK/V2 and the JP1 SWD header. After the Test 14 reset, the running firmware answered `PING`, `STATUS` and a four-driver `SCAN` on the separate COMM UART. Factory UART bootloader programming remains a separate, deferred test.
+- The Pi now hosts the Gabriel Flask/Socket.IO dashboard over the LAN. The SSH launcher selects the garden simulator, STM32 telemetry, Arduino telemetry or supervised paired-X profile. The Pi owns the selected serial port. A reply counter advances on fresh controller data, and an explicit idle scan reports each driver's SPI and fault status. The phone displayed live STM32 replies and healthy U4/X1, U5/X2, U6/Y and U7/Z readbacks. The Arduino adapter received software coverage. [Hosting and scan evidence](../Webapp-Pi/webapp/README.md#pi-3-bench-result-november-24-2026)
+- Added the one-click desktop launcher, larger 3D machine view, X/Y/Z jog and home controls, plant-specific alerts and a topic-based tutorial. The garden simulator supports six planting spots, four illustrated crops, simulated placement, watering and harvest actions. General jog, homing and garden actions are simulator features. The physical dashboard exposes the supervised Test 15 move through **Arm X** and **Run one revolution**. [Dashboard guide](../Webapp-Pi/webapp/README.md)
+- Test 15 verifies the internal reference, nominal 0.30 A phase-current setting and output enable separately on U4 and U5 before asserting their shared X enable. One attempt per STM32 boot issues a bounded 3,200-pulse ramp and monitors both drivers. Firmware returns the measured X1 encoder and index deltas. The Debug build completed with zero warnings or errors. Twelve native firmware cases and 22 dashboard tests passed, including software checks of stop, communication loss and driver faults. [Firmware and build record](STM32G474/README.md#november-24-build-and-programming-results)
+- **Physical PASS.** The phone-commanded run returned `DONE` after 3,200 pulses and 19,856 ms. X1 visibly rotated. Its encoder measured −3,998 counts and one index crossing against 4,000 counts per revolution. Both drivers verified `CTRL1=0x8F` and returned 34 diagnostic samples each, with final raw FAULT and DIAG2 frames `0xC000` and HAL status 0. X2's motor socket was empty. Post-run enable commands were `0/0/0`, and D5 was observed off. Loaded motion on the other channels, mechanical homing and sustained-load qualification remain open. [Full Test 15 hardware result](STM32G474/README.md#test-15-hardware-result)
+
+## 2026-11-23 — Pi 3 power and runtime UART
+
+- The Rev. 1 board and new cable powered a Pi 3 Model B with HDMI attached. The 24 V supply indicated 0.100–0.105 A at idle for the combined board and Pi. Video playback raised the Pi temperature from 42 °C to 68 °C. The observed `vcgencmd get_throttled` value was `0x0` and no undervoltage warning appeared.
+- Tests 12–14 established bidirectional COMM at 115200 8N1, returned idle status and register data for all four drivers, and executed a Pi-commanded U4/X1 revolution. Test 14 measured −3,999 encoder counts and one index for 3,200 issued pulses. U5's bridge stayed disabled in that test. Its scope differs from the paired-X result above.
+
+## 2026-11-22 — STM32G474 Rev. 1 firmware added to the branch
+
+- Added the CubeMX/CMake bring-up project under `Firmware/STM32G474` beside the Arduino PlatformIO project. Earlier bench runs established safe GPIO startup and the D5 heartbeat, external crystal startup while SYSCLK stayed on HSI16, settled SPI communications on all four DRV8461SPWPR devices and bounded U4 motion. Test 10 verified the integrated X1 A/B/Z receiver during a commanded revolution with −3,999 counts and one index.
+
 ## 2026-11-08 — 21:11 EST
 
 - Renamed the PlatformIO project directory from `Farm-Bot/` to `Firmware/` and the Pi/dashboard source directory from `Pi/` to `Webapp-Pi/`. The outer Git repository directory remains unchanged until the repository itself is renamed separately. Updated PlatformIO IntelliSense/debug paths, documentation links, build instructions, and future Pi integration paths to match.

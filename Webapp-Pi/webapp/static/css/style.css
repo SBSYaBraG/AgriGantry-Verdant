@@ -1,252 +1,90 @@
-/* ============================================================
-   style.css - AgriGantry Control
-
-   A control station, not a website. Dark, high contrast, large touch
-   targets: it may run all day on a monitor in a greenhouse, be operated
-   with gloves on, and be read from across a room.
-
-   Panels are SOLID. An earlier version floated translucent frosted-glass
-   panels over a full-page 3D scene; the effect muddied the panels and cost
-   the Raspberry Pi's compositor real work, since backdrop-filter re-blurs
-   the live scene behind every panel on every frame. Solid surfaces read
-   better and cost nothing.
-   ============================================================ */
-
-/* -------------------- DESIGN TOKENS -------------------- */
 :root {
-  --bg:          #0e1218;   /* page */
-  --panel:       #171d26;   /* raised surface */
-  --panel-edge:  #262f3c;   /* panel borders */
-  --inset:       #0a0d12;   /* recessed wells (scene frame, log) */
-
-  --text:        #e8edf4;
-  --text-dim:    #8d99ab;
-
-  --accent:      #43b0a3;   /* AgriGantry teal, taken from the machine */
-  --good:        #3fc47c;
-  --warn:        #e8a838;
-  --bad:         #e8484f;
-
-  --radius: 10px;
-  --gap: 14px;
+  color-scheme: light;
+  --ink: #213930; --muted: #51665a; --forest: #20543e; --leaf: #367453;
+  --line: #d8dfd2; --paper: #fffef9; --wash: #eff3e9; --base: #f4f4eb;
+  --danger: #9c342c; --warm: #8b5322; --radius: 18px;
+  font-family: "DM Sans", "Segoe UI", Roboto, sans-serif;
+  color: var(--ink); background: var(--base);
 }
-
-/* -------------------- RESET / BASE -------------------- */
-* { box-sizing: border-box; margin: 0; padding: 0; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-               "Helvetica Neue", Arial, sans-serif;
-  font-size: 15px;
-  line-height: 1.45;
-  padding: var(--gap);
-  padding-bottom: 32px;
-  -webkit-font-smoothing: antialiased;
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 280px; line-height: 1.42; }
+[hidden] { display: none !important; }
+button, select, input { font: inherit; color: inherit; }
+button, select, summary { cursor: pointer; }
+button { touch-action: manipulation; }
+button:disabled, select:disabled, input:disabled { opacity: .48; cursor: default; }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 3px solid #c57a20; outline-offset: 3px;
 }
-
-h1 { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.4px; }
-
-h2 {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.3px;
-  color: var(--text-dim);
-  margin-bottom: 10px;
-}
-
-.hint { font-size: 0.76rem; color: var(--text-dim); margin-bottom: 9px; }
-.hidden { display: none !important; }
-
-/* -------------------- TOP BAR -------------------- */
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: var(--gap);
-}
-
-.brand { display: flex; align-items: center; gap: 10px; }
-
-/* A small teal square standing in for a logo - enough to make the name feel
-   deliberate without inventing branding. */
-.brand-mark {
-  width: 16px; height: 16px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, var(--accent), #2b7d74);
-  box-shadow: 0 0 12px rgba(67, 176, 163, 0.45);
-}
-
-.brand-light { color: var(--text-dim); font-weight: 400; }
-
-.topbar-status { display: flex; align-items: center; gap: 14px; }
-
-.badge {
-  font-size: 0.66rem; font-weight: 700; letter-spacing: 1px;
-  padding: 4px 9px; border-radius: 4px;
-}
-
-/* Amber rather than green: "simulated" is a caveat and the colour says so. */
-.badge-sim  { background: rgba(232,168,56,0.14); color: var(--warn);
-              border: 1px solid rgba(232,168,56,0.4); }
-.badge-live { background: rgba(63,196,124,0.14); color: var(--good);
-              border: 1px solid rgba(63,196,124,0.4); }
-
-.conn { display: flex; align-items: center; gap: 7px;
-        font-size: 0.78rem; color: var(--text-dim); }
-
-.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.dot-on  { background: var(--good); box-shadow: 0 0 8px var(--good); }
-.dot-off { background: var(--bad);  box-shadow: 0 0 8px var(--bad); }
-
-/* -------------------- BANNERS -------------------- */
-.banner {
-  padding: 11px 16px;
-  border-radius: var(--radius);
-  font-weight: 600;
-  font-size: 0.84rem;
-  text-align: center;
-  margin-bottom: var(--gap);
-}
-
-.banner-estop {
-  background: var(--bad); color: #fff;
-  /* Slow enough not to be painful on a screen watched all day, insistent
-     enough to catch the eye from across the room. */
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-.banner-alm {
-  background: rgba(232,168,56,0.14);
-  border: 1px solid var(--warn);
-  color: var(--warn);
-}
-
-@keyframes pulse { 50% { opacity: 0.66; } }
-
-/* -------------------- LAYOUT --------------------
-   The machine gets the lion's share of the width; the deck takes only what
-   its controls need. 360px is chosen so a row of three jog buttons sits
-   comfortably without wrapping. */
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: var(--gap);
-  align-items: start;
-}
-
-.deck { display: flex; flex-direction: column; gap: var(--gap); }
-
-/* -------------------- SCROLLBARS --------------------
-   Thin and dim. A control station is watched all day; a default chrome
-   scrollbar down the middle of it is a bright stripe that never stops
-   competing with the machine for attention.
-
-   Targeted by element rather than by a helper class in the HTML. A class
-   would mean the stylesheet could not make something scroll on its own - the
-   template would have to agree - and a template that has not caught up is
-   exactly how the deck ended up spilling behind the event log instead of
-   scrolling. CSS that depends only on CSS cannot fall out of step. */
-.deck, .log {
-  overscroll-behavior: contain;   /* scrolling past the end must not drag the page */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.16) transparent;
-}
-
-.deck::-webkit-scrollbar,
-.log::-webkit-scrollbar { width: 6px; }
-
-.deck::-webkit-scrollbar-thumb,
-.log::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.16); border-radius: 3px;
-}
-
-.deck::-webkit-scrollbar-track,
-.log::-webkit-scrollbar-track { background: transparent; }
-
-/* -------------------- PANELS -------------------- */
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--panel-edge);
-  border-radius: var(--radius);
-  padding: 14px;
-}
-
-.panel-log { margin-top: var(--gap); }
-
-/* -------------------- THE SCENE -------------------- */
-
-/* Tighter padding than a normal panel: the machine is the point of this
-   panel, so give the frame as much of the width as possible. */
-.panel-scene { padding: 12px; }
-
-.scene-head {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; margin-bottom: 12px;
-}
-.scene-head h2 { margin-bottom: 0; }
-
-.scene-tools { display: flex; gap: 7px; }
-
-#btn-toggle-view[aria-pressed="true"] {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* The frame is a recessed well the machine sits inside. Positioned so the
-   minimap can be placed against its corner. */
-.scene-frame {
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid var(--panel-edge);
-  /* A soft gradient reads as a horizon behind the machine. The WebGL canvas
-     is transparent, so this shows through - cheaper than rendering a skybox
-     and it keeps the model the only thing actually drawn. */
-  background:
-    radial-gradient(ellipse 110% 75% at 50% 100%, #1a2029, transparent 70%),
-    linear-gradient(180deg, #0a0d12, #11161d);
-}
-
-.scene-container {
-  width: 100%;
-  /* 16:9, not a wider letterbox. The machine is 1.38 m tall and 1.23 m long -
-     taller than it is long, once the legs and gantry are counted - so its
-     silhouette is roughly square. A cinematic frame would leave big empty
-     margins either side and make the machine look small and far away. */
-  aspect-ratio: 16 / 9;
-  /* Lets a drag rotate the model rather than scrolling the page on a
-     touchscreen. */
-  touch-action: none;
-}
-
-.scene-container canvas { display: block; width: 100%; height: 100%; }
-
-/* The 3D scene is optional. The lightweight minimap remains available while
-   the model is hidden, but the WebGL canvas does no work. */
-.scene-frame.view-disabled .scene-container { display: none; }
-.scene-frame.view-disabled {
-  background: radial-gradient(circle at 50% 45%, #111922 0%, var(--inset) 70%);
-}
-
-.scene-status {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  letter-spacing: 0.5px;
-  transition: opacity 0.4s;
-  pointer-events: none;
-}
-
-.scene-status.is-gone { opacity: 0; }
-.scene-status.is-error { color: var(--bad); max-width: 70%; text-align: center; }
-
+:where(.solid-btn, .soft-btn, .quiet-btn, .stop-btn, .arrow, .seed-card, .spot):not(:disabled):active { transform: translateY(1px); }
+h1, h2, h3, p, dl { margin: 0; }
+h1, h2, .brand { font-family: "Baskervville", Georgia, serif; }
+h1 { font-size: clamp(2rem, 4vw, 3.35rem); font-weight: 500; letter-spacing: -.045em; line-height: 1.08; }
+h2 { font-size: clamp(1.25rem, 2vw, 1.65rem); font-weight: 500; letter-spacing: -.035em; }
+h3 { font-size: .92rem; }
+.app-header { background: #163e32; color: #fbf9e9; }
+.header-inner, .shell { width: min(1370px, 100%); margin: auto; padding-inline: clamp(16px, 4vw, 64px); }
+.header-inner { display: flex; align-items: center; gap: clamp(14px, 3vw, 42px); min-height: 66px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; font-size: 1.68rem; letter-spacing: -.045em; font-weight: 600; }
+.brand-mark { position: relative; width: 26px; height: 29px; display: inline-block; border-bottom: 2px solid #d7df90; }
+.brand-mark::before, .brand-mark::after { content: ""; position: absolute; background: #d7df90; border-radius: 0 85% 0 85%; width: 12px; height: 16px; bottom: 5px; left: 1px; transform: rotate(-10deg); }
+.brand-mark::after { width: 13px; height: 20px; left: 12px; bottom: 7px; transform: scaleX(-1) rotate(-9deg); }
+nav { display: flex; align-self: stretch; gap: 8px; }
+nav a { color: #c5d8c9; text-decoration: none; padding: 0 14px; display: inline-flex; gap: 6px; align-items: center; border-bottom: 3px solid transparent; font-size: .92rem; font-weight: 600; }
+nav a[aria-current="page"] { color: white; border-color: #d8e495; }
+.tab-count, .spot-count { display: inline-grid; min-width: 1.45rem; min-height: 1.45rem; place-items: center; padding: 0 .3rem; line-height: 1; font: 750 .72rem/1 system-ui,sans-serif; font-variant-numeric: tabular-nums; border-radius: 50px; color: #284526; background: #dceba6; }
+.tab-count.motor-count { background: #ffd7bf; color: #732b16; }
+.guide-link { display: inline-flex; align-items: center; gap: 6px; color: #edf2e6; text-decoration: none; font-size: .85rem; font-weight: 650; padding: 8px 0 8px 12px; border-left: 1px solid #537363; }
+.guide-link span { display: grid; place-items: center; width: 19px; height: 19px; border: 1.5px solid currentColor; border-radius: 50%; font: 700 .78rem/1 system-ui,sans-serif; }
+.guide-link:hover, .guide-link[aria-current] { color: #e1ed9a; }
+.connection { margin-left: auto; display: flex; align-items: center; gap: 12px; font-size: .76rem; font-weight: 600; }
+#mode-badge { border: 1px solid #779386; border-radius: 100px; padding: 3px 10px; }
+#conn-text::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #edb983; margin-right: 6px; }
+#conn-text.connected::before { background: #c0de86; }
+.shell { padding-bottom: 3rem; }
+.page-heading, .panel-head, .position-head, .actions, .stop-controls { display: flex; align-items: center; gap: 8px; }
+.page-heading, .panel-head, .position-head { justify-content: space-between; }
+.page-heading { padding: clamp(20px, 3vw, 38px) 0 22px; }
+.solid-btn, .soft-btn, .quiet-btn, .stop-btn, .text-btn, select { border-radius: 8px; font-weight: 650; font-size: .83rem; padding: 8px 13px; min-height: 38px; border: 1px solid transparent; }
+.quiet-btn, select { background: var(--paper); border-color: #bfcbbf; }
+.soft-btn { background: #e0eadb; color: #254d36; border-color: #c1d4bd; }
+.solid-btn { background: var(--forest); color: white; }
+.stop-btn { background: #f9e3db; color: var(--danger); border-color: #d79e91; display: inline-flex; align-items: center; gap: 8px; }
+.stop-square { width: 11px; height: 11px; background: currentColor; border-radius: 2px; }
+.alert-link { font-size: .79rem; font-weight: 650; color: #813e1c; background: #f9e9cf; border: 1px solid #d9b88a; border-radius: 8px; padding: 8px; }
+#alerts-panel { scroll-margin-top: 80px; }
+.page-heading { position: sticky; z-index: 6; top: 0; background: var(--base); }
+.text-btn { border: 0; background: transparent; color: var(--forest); padding-inline: 0; text-decoration: underline; text-underline-offset: 3px; }
+button:not(:disabled):hover { filter: brightness(.95); }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, .36fr); gap: 18px; align-items: start; }
+.work-pane, .side-pane { display: grid; gap: 16px; min-width: 0; }
+.panel { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 2px 5px #263c2610; overflow: hidden; }
+.panel-head { padding: 15px clamp(14px, 2vw, 24px); border-bottom: 1px solid var(--line); min-height: 60px; }
+.scene-frame { position: relative; height: clamp(380px, 55vh, 660px); isolation: isolate; overflow: hidden; background: #a8dafa; }
+#scene-container, #scene-container canvas { width: 100%; height: 100%; display: block; }
+#scene-container { position: absolute; inset: 0; }
+.scene-frame.view-disabled #scene-container { display: none; }
+.bed-overview, .art-view { background: linear-gradient(to bottom,#a8dafa 0 19%,#b8d8a3 19%,#99bd7b 35%,#88ae6e 100%); }
+.bed-overview { position: absolute; inset: 0; display: grid; place-items: center; padding-top: 7%; }
+.bed-overview::before, .art-view::before { content: ""; position: absolute; inset: 20% 0 0; pointer-events: none;
+  background: linear-gradient(48deg,transparent 43%,#567a473b 48% 58%,transparent 63%) 10px 6px / 4px 3px,
+    linear-gradient(-53deg,transparent 42%,#567a4742 48% 57%,transparent 63%) 13px 5px / 4px 4px;
+  mask-image: radial-gradient(ellipse 5px 4px at 13px 7px,#000 75%,transparent); mask-size: 41px 29px;
+  opacity: .58; }
+.scene-frame:not(.view-disabled) .bed-overview, .scene-frame:not(.view-disabled) .plan-caption { display: none; }
+.scene-frame.unmeasured-pose .plan-caption { display: block; z-index: 2; pointer-events: none; }
+.overview-bed { position: relative; width: min(75%, 690px); aspect-ratio: var(--bed-ratio, 2.15); max-height: 72%; border: clamp(5px,.65vw,9px) solid #ae8052;
+  border-radius: 9px; background: #8a6446; box-shadow: inset 0 0 0 3px #5b4630, 0 0 0 2px #594a34, 5px 8px 0 #49663c4a, 7px 16px 22px #3f613c4d; }
+.overview-bed::before, .overview-bed::after { content: ""; position: absolute; left: -4%; right: -4%; height: 4px; background: #69847d; border: 1px solid #3b524a; border-radius: 2px; }
+.overview-bed::before { top: -12px; } .overview-bed::after { bottom: -12px; }
+.soil-ridges { position: absolute; inset: 6%; border-radius: 3px; background: repeating-linear-gradient(0deg,#856040 0 9px,#755338 10px 13px,#8d694a 14px 18px); }
+.gantry-rail { position: absolute; top: -13%; height: 126%; width: 10px; margin-left: -5px; background: #c0cdc4; border: 2px solid #426055; border-radius: 3px; z-index: 1; }
+.tool-head { position: absolute; left: 50%; width: 19px; height: 19px; transform: translate(-50%, -50%); background: #e6a250; border: 4px solid #284d3e; border-radius: 50%; }
+.plan-caption, .scene-status { position: absolute; left: 14px; bottom: 10px; font-size: .72rem; }
+.plan-caption { color: #304b3a; background: #eef4e6e8; padding: 3px 8px; border-radius: 4px; }
+.scene-status { color: #fff; background: #243526; padding: 5px 9px; max-width: 85%; }
+.scene-status.is-gone, .view-disabled .scene-status:not(.is-error) { display: none; }
+.scene-status.is-error { color: #fff1e9; background: #823c32; }
 /* -------------------- VIEW CUBE --------------------
    A small CSS 3D cube keeps this control much cheaper than a second WebGL
    renderer. Faces select square-on views; its eight vertices select the
@@ -355,371 +193,156 @@ h2 {
 .corner-bfl { --corner-x: -29px; --corner-y: 29px;  --corner-z: 29px; }
 .corner-bbr { --corner-x: 29px;  --corner-y: 29px;  --corner-z: -29px; }
 .corner-bbl { --corner-x: -29px; --corner-y: 29px;  --corner-z: -29px; }
-
-/* -------------------- MINIMAP -------------------- */
-.minimap {
-  position: absolute;
-  left: 14px; bottom: 14px;
-  width: 150px; height: 150px;
-  border-radius: 50%;
-  background: rgba(10, 13, 18, 0.86);
-  border: 1px solid var(--panel-edge);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.5);
-  pointer-events: none;   /* never steals a camera drag */
+.jog-size, .hint, .tag, .condition-list dt, .planting-bed .spot-id { font-size: .8rem; }
+.jog-size { display: flex; gap: 8px; align-items: center; color: var(--muted); }
+.movement-body { display: grid; grid-template-columns: auto minmax(0,1fr); align-items: center; gap: clamp(18px, 3vw, 42px); padding: clamp(14px, 2vw, 25px); }
+.jogs, .z-pad { display: flex; align-items: center; }
+.jogs { --key-size: clamp(47px,4.6vw,58px); gap: clamp(10px,1.8vw,22px); }
+.xy-pad, .z-pad { background: linear-gradient(145deg,#f1f5e9,#e3ecdb); border: 1px solid #c7d4c1; box-shadow: inset 0 2px 0 #fff9, 0 2px 0 #d2ddcc; }
+.xy-pad { display: grid; grid-template-columns: repeat(3,var(--key-size)); grid-template-rows: repeat(3,var(--key-size)); gap: 3px; padding: 9px; place-items: center; border-radius: 32%; }
+.arrow { --turn: 45deg; display: grid; place-items: center; width: var(--key-size); height: var(--key-size); padding: 0; border: 1px solid #1a3e30; border-radius: 34%;
+  background: linear-gradient(155deg,#355d48,#193c30 85%); color: #f9fbe9; box-shadow: inset 0 1px 0 #ffffff40,0 3px 0 #112f24,0 4px 6px #26492f30;
+  transition: transform .12s ease, box-shadow .12s ease; }
+.arrow::before { content: ""; width: 12px; height: 12px; border: solid currentColor; border-width: 4px 4px 0 0; border-radius: 2px; transform: rotate(var(--turn)); }
+.arrow.forward, .z-pad [data-sign="-1"] { --turn: -45deg; }
+.arrow.left { --turn: -135deg; } .arrow.back, .z-pad [data-sign="1"] { --turn: 135deg; }
+.arrow:enabled:hover { background: #38634a; filter: none; }
+.arrow:enabled:active { transform: translateY(3px); box-shadow: inset 0 1px 3px #0a2d23,0 1px 0 #112f24; }
+.arrow:disabled { color: #55685b; background: #d7e0d2; border-color: #bcc9b9; box-shadow: 0 2px 0 #b7c6b2; opacity: 1; }
+.forward { grid-area: 1 / 2; } .left { grid-area: 2 / 1; } .right { grid-area: 2 / 3; } .back { grid-area: 3 / 2; }
+.pad-center { grid-area: 2 / 2; width: 86%; height: 86%; display: grid; place-items: center; color: #3c6048; background: #f7f9ed; border: 1px solid #bccdb6; border-radius: 50%; box-shadow: 0 0 0 3px #d9e4d3; font: 750 .67rem/1 system-ui,sans-serif; }
+.z-pad { flex-direction: column; gap: 7px; padding: 8px 6px; border-radius: 25px; }
+.z-pad span { color: #47634b; font-size: .67rem; font-weight: 750; }
+.position-head { margin-bottom: 8px; } .position-head h3 { font-size: 1rem; }
+.axis-row { display: grid; grid-template-columns: 14px minmax(24px,1fr) minmax(66px,auto) auto; align-items: center; gap: 8px; padding: 4px 0; font-size: .79rem; }
+.axis-row output { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.axis-row .quiet-btn { padding: 4px 8px; min-height: 32px; font-size: .76rem; }
+.axis-track { height: 6px; background: #e6e9df; border-radius: 5px; overflow: hidden; }
+.axis-track i { display: block; height: 100%; background: var(--leaf); width: 0; }
+.alert-count, .tag { border-radius: 20px; padding: 2px 9px; background: #e8eedf; color: #38553b; font-weight: 650; }
+.alert-count { font-size: .77rem; min-width: 25px; text-align: center; }
+.alerts-list { display: grid; gap: 8px; padding: 16px; }
+.alert-item { border-left: 4px solid #86a982; padding: 9px 10px; background: #edf3e8; border-radius: 5px; }
+.alert-item b { display: block; font-size: .88rem; } .alert-item small { display: block; font-size: .77rem; margin-top: 3px; }
+.alert-item.warning { border-color: #ce993b; background: #fbefcf; color: #734916; }
+.alert-item.critical { border-color: #b44835; background: #fae6df; color: #79362a; }
+.alert-spot { display: inline-block; margin-top: 5px; color: inherit; font-size: .78rem; font-weight: 700; text-underline-offset: 3px; }
+.show-more { border-top: 1px solid var(--line); }
+.show-more summary, .activity summary, .coordinates summary { padding: 12px 16px; font-size: .84rem; font-weight: 650; color: var(--forest); }
+.show-more summary span { margin-left: 7px; font-weight: 400; color: var(--muted); font-size: .77rem; }
+.trigger-body { padding: 0 16px 10px; display: grid; gap: 8px; }
+.trigger-body h3 { margin-top: 4px; font-size: .82rem; }
+.trigger-label { font-size: .76rem; color: var(--muted); } #demo-spot { width: 100%; }
+.trigger-body .hint { margin-top: 0; }
+.trigger-buttons { display: flex; flex-wrap: wrap; gap: 5px; }
+.trigger-buttons .quiet-btn { font-size: .76rem; padding: 5px 8px; min-height: 34px; }
+.trigger-body .text-btn { justify-self: start; }
+.condition-list { padding: 3px 16px 7px; }
+.condition-list > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.condition-list > div:last-child { border: 0; } .condition-list dd { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px 8px; margin: 0; font-size: .82rem; font-weight: 650; }
+.reading-value { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.reading-status { display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; border-radius: 1rem; background: #eef0eb; color: #506056; font: 650 .72rem/1.3 system-ui,sans-serif; white-space: nowrap; }
+.reading-status i { font-style: normal; } .reading-status[data-state="good"] { color: #285638; background: #e2efdc; }
+.reading-status[data-state="warning"] { color: #794619; background: #fae9c9; }
+.log { margin: 0 12px 12px; padding: 8px; max-height: 190px; overflow: auto; border-radius: 7px; background: var(--wash); color: var(--muted); font: .74rem/1.45 Consolas,monospace; overflow-wrap: anywhere; }
+.garden-body { display: grid; grid-template-columns: minmax(165px,.53fr) minmax(0,1fr); padding: clamp(14px,2vw,24px); gap: clamp(12px,2vw,24px); }
+.hint { color: var(--muted); margin-top: 5px; line-height: 1.5; }
+.seed-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; margin-top: 13px; }
+.seed-card { display: grid; place-items: center; padding: 5px 3px 7px; border-radius: 12px; border: 1px solid #d9ddc9; background: #f4f0df; font-size: .81rem; }
+.seed-card[data-crop="radish"] { background: #f5e8e6; } .seed-card[data-crop="basil"] { background: #e3eddf; } .seed-card[data-crop="lettuce"] { background: #edf0d9; }
+.seed-card[aria-pressed="true"] { outline: 2px solid var(--forest); outline-offset: 1px; }
+.seed-card[draggable="true"]:enabled { cursor: grab; }
+.crop-art { display: block; width: 58px; max-width: 100%; aspect-ratio: 1; background: url("../img/seed-library.webp") no-repeat; background-size: 200% 200%; }
+.crop-carrot { background-position: 0 0; } .crop-radish { background-position: 100% 0; } .crop-basil { background-position: 0 100%; } .crop-lettuce { background-position: 100% 100%; }
+.bed-wrap { padding: 9px; align-self: stretch; border: 2px solid #8f6d4b; border-radius: 18px; background: repeating-linear-gradient(1deg,#b4895b 0 7px,#bd9469 8px 11px); box-shadow: 0 3px 0 #866746; }
+.planting-bed { display: grid; height: 100%; grid-template-columns: repeat(2,minmax(0,1fr)); grid-template-rows: repeat(3,1fr); background: repeating-linear-gradient(0deg,#604834 0 14px,#644c37 15px 23px); border: 2px solid #58402f; border-radius: 9px; padding: 8px; gap: 6px; }
+.spot { position: relative; display: grid; justify-items: center; align-content: center; gap: 1px; min-height: 80px; border-radius: 9px; color: #fcf3da; border: 1px dashed #bca487; background: #775d4380; }
+.spot[aria-pressed="true"], .spot.drag-over { background: #886c4e; outline: 2px solid #dce6a5; outline-offset: -2px; }
+.spot .spot-id { position: absolute; top: 4px; left: 6px; font-weight: 650; font-size: .68rem; color: #f3deba; }
+.spot-count { position: absolute; right: 4px; top: 4px; min-width: 18px; min-height: 18px; color: #593914; background: #ffdf8d; }
+.spot-art { display: grid; align-items: center; justify-items: center; height: 35px; width: 35px; border: 1px dashed #d5bb8d; border-radius: 50%; color: #f4dfb8; font-size: 1.1rem; }
+.spot-art.crop-art { background-color: #f7edcf; border-style: solid; }
+.spot-crop { font-size: .78rem; font-weight: 650; } .spot-stage { color: #f4e3c9; font-size: .68rem; }
+.placement { padding: 16px clamp(14px,2vw,24px); display: grid; gap: 12px; }
+#placement-title { scroll-margin-block: 110px; }
+.placement .actions { flex-wrap: wrap; }
+.coordinates summary { padding: 4px 0; }
+.coordinates fieldset { padding: 7px 0 0; margin: 0; display: flex; gap: 12px; border: 0; }
+.coordinates legend { font-size: .75rem; color: var(--muted); }
+.coordinates label { font-size: .8rem; font-weight: 650; }
+.coordinates input { width: 74px; max-width: 100%; margin-left: 2px; padding: 6px; background: #fff; border: 1px solid var(--line); border-radius: 5px; }
+.feedback { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); max-width: min(500px,90%); width: max-content; padding: 10px 16px; border-radius: 10px; box-shadow: 0 4px 14px #152c2330; background: #204839; color: white; z-index: 5; }
+.guide { --guide-pad: clamp(18px,4vw,46px); }
+.guide-heading { gap: 10px; }
+.guide-heading .quiet-btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.guide-heading .quiet-btn span { font-size: 1.1rem; line-height: 1; }
+#guide-index { padding: var(--guide-pad); } #guide-index > p { color: var(--muted); margin-bottom: 20px; }
+.guide-topic-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(235px,100%),1fr)); gap: 12px; }
+.guide-topic { display: flex; align-items: center; gap: 12px; min-height: 96px; padding: 14px; color: var(--ink); text-decoration: none; border: 1px solid #cfdacc; border-radius: 14px; background: #f8faf2; }
+.guide-topic:hover { background: #eef4e7; border-color: #92ab8a; }
+.guide-topic strong, .guide-topic small { display: block; } .guide-topic small { margin-top: 3px; color: var(--muted); line-height: 1.35; }
+.topic-icon { flex: 0 0 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; font-size: 1.55rem; background: #dce8d5; color: #35543b; }
+.icon-planting .crop-art { width: 40px; } .icon-conditions { background: #dbe9e9; color: #385c60; } .icon-alarms { color: #8b5322; background: #fae9c9; }
+.topic-chevron { margin-left: auto; color: #506657; font-size: 1.4rem; }
+.guide-topics-link { color: var(--forest); font-size: .85rem; font-weight: 650; text-underline-offset: 3px; }
+.guide-art { position: relative; height: clamp(185px,26vw,265px); display: flex; gap: clamp(12px,3vw,38px); align-items: center; justify-content: center; overflow: hidden; background-color: #e6eedf; }
+.art-axes, .art-alarm, .art-stop, .art-link, .art-conditions { background-image: linear-gradient(#69827814 1px,transparent 1px),linear-gradient(90deg,#69827814 1px,transparent 1px); background-size: 22px 22px; }
+.art-pad { background: #e5ecdf; } .art-plant { background: #e9e4cf; } .art-harvest, .art-water { background: #efe2d9; } .art-alarm, .art-stop, .art-link, .art-conditions { background-color: #e7ebed; }
+.guide-condition-sample { display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 92%; }
+.guide-instrument, .guide-seed { padding: 17px 21px; background: var(--paper); border: 1px solid #96ac91; border-radius: 15px; box-shadow: 4px 6px 0 #738b682b; }
+.guide-axes { display: grid; gap: 13px; width: min(238px,75%); transform: rotate(-2deg); }
+.guide-axes div { display: flex; align-items: center; gap: 12px; font: 700 .82rem/1 system-ui,sans-serif; }
+.guide-axes i { flex: 1; height: 7px; border-radius: 5px; background: linear-gradient(90deg,#578668 50%,#e2e9df 50%); }
+.guide-pad { display: grid; grid-template: repeat(3,38px) / repeat(3,38px); gap: 3px; padding: 10px; background: #cbdac5; border-radius: 33%; transform: rotate(-6deg); }
+.guide-pad i { display: grid; place-items: center; color: #fff; border-radius: 12px; background: #244c37; }
+.guide-pad i::after { content: ""; width: 9px; height: 9px; border: solid currentColor; border-width: 3px 3px 0 0; transform: rotate(var(--turn)); }
+.guide-pad i:nth-child(1) { grid-area: 1 / 2; --turn: -45deg; } .guide-pad i:nth-child(2) { grid-area: 2 / 1; --turn: -135deg; }
+.guide-pad i:nth-child(4) { grid-area: 2 / 3; --turn: 45deg; } .guide-pad i:nth-child(5) { grid-area: 3 / 2; --turn: 135deg; }
+.guide-pad b { grid-area: 2 / 2; display: grid; place-items: center; border-radius: 50%; background: #f7f9ec; font-size: .61rem; }
+.guide-distance { align-self: center; padding: 8px 15px; border-radius: 9px; border: 1px solid #a6b8a2; background: var(--paper); font-weight: 650; }
+.guide-bed { position: relative; width: min(55%,260px); aspect-ratio: 2.2; margin-top: 20px; transform: skew(-15deg) rotate(-6deg); border: 7px solid #ae8258; box-shadow: 3px 6px 0 #76583e,8px 12px 0 #536f4847; background: repeating-linear-gradient(0deg,#775438 0 9px,#846344 9px 14px); }
+.guide-bed i { position: absolute; inset: -11% auto -11% 43%; width: 8px; background: #cad3c8; border: 2px solid #4d6559; }
+.guide-bed b { position: absolute; top: 32%; left: calc(43% - 4px); width: 16px; height: 16px; background: #e8a255; border: 3px solid #335742; border-radius: 50%; }
+.guide-seed, .guide-plot { display: grid; justify-items: center; align-content: center; padding: 9px 15px; }
+.guide-seed { transform: rotate(-7deg); } .guide-path { font-size: 2rem; color: var(--forest); }
+.guide-plot { position: relative; width: 94px; min-height: 86px; border-radius: 12px; color: #f6e8c7; background: #75593e; border: 2px dashed #b59871; }
+.guide-plot small { position: absolute; top: 4px; left: 5px; font-size: .65rem; }
+.guide-art .crop-art { width: 61px; }
+.guide-harvest, .guide-alarm { display: flex; align-items: center; gap: 14px; }
+.guide-harvest div, .guide-alarm div { display: grid; gap: 3px; }
+.guide-harvest small, .guide-alarm small { color: var(--muted); }
+.guide-harvest span { color: #466239; font-size: .78rem; }
+.guide-alarm { border-left: 5px solid #ab4c39; }
+.guide-alarm i { border-radius: 50%; width: 28px; height: 28px; display: grid; place-items: center; background: #f8ded4; color: #8d3e2f; font-style: normal; font-weight: 750; }
+.guide-copy { padding: clamp(18px,3vw,32px) var(--guide-pad); min-height: 172px; }
+.guide-step { margin-bottom: 8px; color: #526b53; font-size: .77rem; font-weight: 700; }
+.guide-copy h3 { font: 500 clamp(1.55rem,3vw,2.25rem)/1.12 "Baskervville",Georgia,serif; letter-spacing: -.035em; scroll-margin-top: 100px; }
+.guide-copy h3 + p { max-width: 60ch; margin-top: 12px; color: #42584b; line-height: 1.6; }
+.guide-footer { display: flex; align-items: center; justify-content: space-between; gap: 9px; padding: 12px var(--guide-pad); border-top: 1px solid var(--line); }
+@media (max-width: 1020px) {
+  .workspace { grid-template-columns: minmax(0,1fr) 245px; gap: 12px; }
+  .movement-body { grid-template-columns: 1fr; gap: 10px; } .jogs { justify-self: center; }
+  .garden-body { grid-template-columns: minmax(132px,.55fr) minmax(0,1fr); }
 }
-
-.minimap-dial {
-  position: relative;
-  width: 104px; height: 104px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 50% 42%, rgba(67,176,163,0.10), transparent 65%),
-    rgba(0, 0, 0, 0.34);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex; align-items: center; justify-content: center;
-  overflow: hidden;
+@media (max-width: 730px) {
+  .header-inner { flex-wrap: wrap; column-gap: 15px; row-gap: 0; padding-top: 6px; }
+  .brand { font-size: 1.4rem; } .connection { font-size: .67rem; gap: 5px; }
+  nav { order: 3; width: 100%; } nav a { padding: 7px 10px; }
+  .workspace { grid-template-columns: 1fr; }
+  .page-heading { padding-block: 17px; } .page-heading h1 { font-size: 1.9rem; }
+  .movement-body { grid-template-columns: auto minmax(0,1fr); }
+  .scene-frame { height: clamp(290px,55vw,420px); }
 }
-
-/* Faint crosshair, so the dial reads as an instrument. */
-.minimap-dial::before,
-.minimap-dial::after {
-  content: ""; position: absolute; background: rgba(255, 255, 255, 0.06);
+@media (max-width: 530px) {
+  .page-heading { align-items: flex-start; flex-wrap: wrap; } .page-heading .stop-controls { margin-left: auto; }
+  .movement-body { grid-template-columns: 1fr; } .jogs { justify-self: center; }
+  .guide-link { padding-left: 6px; font-size: .75rem; } .header-inner { column-gap: 8px; }
+  .garden-body { grid-template-columns: 1fr; } .seed-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .crop-art { width: 48px; } .spot-art.crop-art { width: 35px; }
+  .panel-head { flex-wrap: wrap; } .coordinates fieldset { flex-wrap: wrap; }
 }
-.minimap-dial::before { left: 0; right: 0; height: 1px; }
-.minimap-dial::after  { top: 0; bottom: 0; width: 1px; }
-
-/* The bed. Aspect ratio set from real machine geometry by JavaScript, so the
-   plan is always in the machine's true proportions. */
-.mini-bed {
-  position: relative;
-  width: 84%;
-  background: rgba(196, 144, 92, 0.20);
-  border: 1px solid rgba(224, 164, 88, 0.45);
-  border-radius: 2px;
+@media (max-height: 550px) { .page-heading { position: static; } }
+@media (pointer: coarse) {
+  :is(.quiet-btn,.solid-btn,.soft-btn,.stop-btn,.alert-link), .trigger-buttons .quiet-btn, .axis-row .quiet-btn { min-height: 44px; }
 }
-
-/* The gantry: spans the bed's width, slides along its length. */
-.mini-gantry {
-  position: absolute;
-  top: -2px; bottom: -2px;
-  width: 2px; margin-left: -1px;
-  background: var(--text-dim);
-  /* The server broadcasts about 8 times a second; this interpolates between
-     those snapshots so travel glides instead of stepping. Matched to the
-     broadcast interval - longer would visibly lag the machine. */
-  transition: left 0.13s linear;
-  left: 0;
-}
-
-/* The tool head, riding on the gantry. */
-.mini-tool {
-  position: absolute;
-  width: 9px; height: 9px;
-  margin: -4.5px 0 0 -4.5px;
-  border-radius: 50%;
-  background: var(--accent);
-  border: 1.5px solid #fff;
-  box-shadow: 0 0 10px var(--accent);
-  transition: left 0.13s linear, top 0.13s linear;
-  z-index: 2;
-  left: 0; top: 0;
-}
-
-.minimap-home {
-  position: absolute;
-  top: 5px; left: 8px;
-  font-size: 0.52rem; font-weight: 700;
-  color: rgba(255, 255, 255, 0.34);
-}
-
-.minimap-readout {
-  display: flex; gap: 8px;
-  font-size: 0.57rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-dim);
-  letter-spacing: 0.3px;
-}
-
-/* -------------------- BUTTONS -------------------- */
-.btn {
-  font-family: inherit;
-  font-size: 0.82rem; font-weight: 600;
-  color: var(--text);
-  background: #232c38;
-  border: 1px solid #2f3a49;
-  border-radius: 7px;
-  /* 44px is the accepted comfortable touch target. */
-  min-height: 44px;
-  padding: 9px 13px;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, transform 0.06s;
-}
-
-.btn:hover:not(:disabled) { background: #2b3543; border-color: #3a4759; }
-.btn:active:not(:disabled) { transform: translateY(1px); }
-
-/* Disabled controls must look unmistakably dead: during an emergency stop
-   the operator needs to see instantly that the machine will not respond. */
-.btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-.btn-primary {
-  background: var(--accent); border-color: var(--accent); color: #041a17;
-}
-.btn-primary:hover:not(:disabled) { background: #56c6b8; border-color: #56c6b8; }
-
-.btn-wide { width: 100%; }
-.btn-small { min-height: 32px; padding: 6px 11px; font-size: 0.7rem;
-             letter-spacing: 0.5px; }
-
-/* The stop button dominates by size, the way a physical mushroom head does. */
-.panel-safety { display: flex; gap: 10px; }
-
-.btn-estop {
-  flex: 2;
-  background: var(--bad); border-color: var(--bad); color: #fff;
-  font-size: 0.95rem; font-weight: 800; letter-spacing: 0.8px;
-  min-height: 58px;
-}
-.btn-estop:hover:not(:disabled) { background: #ff5b62; border-color: #ff5b62; }
-
-.btn-resume { flex: 1; min-height: 58px; }
-
-/* -------------------- AXIS PANELS -------------------- */
-.axis-panel { margin-bottom: var(--gap); }
-
-.axis-head {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.axis-name { font-size: 0.85rem; font-weight: 600; }
-
-.homed-badge {
-  font-size: 0.58rem; font-weight: 700; letter-spacing: 0.7px;
-  padding: 3px 7px; border-radius: 3px;
-  background: rgba(232,72,79,0.14); color: var(--bad);
-  border: 1px solid rgba(232,72,79,0.32);
-}
-
-.homed-badge.is-homed {
-  background: rgba(63,196,124,0.14); color: var(--good);
-  border-color: rgba(63,196,124,0.32);
-}
-
-/* Live position for this axis. tabular-nums keeps digit widths equal so the
-   number does not jitter sideways while the machine is moving. */
-.axis-readout {
-  display: flex; align-items: baseline; gap: 8px;
-  margin-bottom: 10px;
-  font-variant-numeric: tabular-nums;
-}
-
-.axis-mm { font-size: 1.05rem; font-weight: 600; }
-.axis-sub { font-size: 0.66rem; color: var(--text-dim); }
-
-/* Jog buttons: two rows of three rather than one wrapping row. Grid keeps
-   every button the same width, so negative and positive steps line up in
-   matching columns and the control reads symmetrically. */
-.jog-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
-  margin-bottom: 6px;
-}
-.jog-row .btn { padding: 8px 4px; font-size: 0.76rem; }
-
-.abs-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.abs-row .btn { padding: 6px 4px; }
-
-/* -------------------- ALARM LIGHTS -------------------- */
-.alm-lights { display: flex; gap: 7px; flex-wrap: wrap; }
-
-.alm-light {
-  flex: 1; min-width: 52px; text-align: center;
-  background: var(--inset);
-  border: 1px solid var(--panel-edge);
-  border-radius: 6px;
-  padding: 8px 4px;
-}
-
-.alm-light .alm-bulb {
-  width: 11px; height: 11px; border-radius: 50%;
-  margin: 0 auto 5px;
-  background: #2a3240;
-  transition: background 0.2s, box-shadow 0.2s;
-}
-
-/* Healthy motors glow softly green; a faulted one glows red and pulses so it
-   is identifiable from across the room. */
-.alm-light.ok    .alm-bulb { background: var(--good);
-                             box-shadow: 0 0 7px var(--good); }
-.alm-light.fault .alm-bulb { background: var(--bad);
-                             box-shadow: 0 0 11px var(--bad);
-                             animation: pulse 0.8s ease-in-out infinite; }
-
-.alm-light .alm-name { font-size: 0.63rem; font-weight: 600;
-                       color: var(--text-dim); letter-spacing: 0.4px; }
-
-/* -------------------- DEVELOPER TOOLS -------------------- */
-/* Dashed edge marks this as "not part of the real machine". */
-.panel-dev { border-style: dashed; }
-
-.panel-dev summary {
-  cursor: pointer; font-size: 0.7rem; font-weight: 700;
-  color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;
-  list-style: none;
-}
-.panel-dev summary::-webkit-details-marker { display: none; }
-.panel-dev[open] summary { margin-bottom: 10px; }
-
-.dev-buttons { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
-
-/* -------------------- EVENT LOG -------------------- */
-.log {
-  /* Monospace so timestamps line up into a readable column. */
-  font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.72rem;
-  line-height: 1.6;
-  background: var(--inset);
-  border: 1px solid var(--panel-edge);
-  border-radius: 7px;
-  padding: 10px 12px;
-  height: 150px;
-  overflow-y: auto;
-  color: var(--text-dim);
-  /* Scrollbar cosmetics are shared with the deck, up in SCROLLBARS. */
-}
-
-.log-line { white-space: pre-wrap; word-break: break-word; }
-
-/* Colour-code what matters so it stands out in a wall of text. */
-.log-line.is-alert { color: var(--bad); font-weight: 600; }
-.log-line.is-warn  { color: var(--warn); }
-.log-line.is-sim   { color: #9a86e8; }
-
-/* ============================================================
-   APP SHELL - the deck scrolls, the machine does not
-
-   By default this page is an ordinary scrolling document. That was wrong for
-   a control station: the deck is taller than the machine view, so reaching
-   the alarm lights meant scrolling the machine itself off the top of the
-   screen. On the Pi's wall-mounted monitor there is nowhere to scroll back
-   to - the operator just loses sight of the machine.
-
-   So above this size the page becomes a fixed shell: everything is pinned to
-   the viewport, the machine view grows to fill whatever height is left over,
-   and only the deck scrolls. The two are independent - moving through the
-   controls never disturbs the view of the machine.
-
-   The min-height condition matters. In a short window there is no height
-   left over to give the machine, and pinning everything would squash the
-   scene into a letterbox slit. Below that the page falls back to scrolling
-   normally, which is always usable even if it is less elegant.
-   ============================================================ */
-@media (min-width: 1001px) and (min-height: 640px) {
-  html, body { height: 100%; }
-
-  body {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;          /* the page itself never scrolls */
-    padding-bottom: var(--gap);
-  }
-
-  /* Takes all the height the header, banners and log leave behind.
-     min-height:0 is what actually permits it to shrink - without it a grid
-     item refuses to go below the size of its contents and the log gets
-     pushed off the bottom of the screen. */
-  .layout {
-    flex: 1 1 auto;
-    min-height: 0;
-    align-items: stretch;      /* both columns run the full height */
-    /* THIS is what makes the deck scroll rather than the page.
-       A grid row defaults to `auto`, which means "as tall as the tallest
-       item" - so the row simply grew to fit the whole deck and pushed it out
-       of the shell. Nothing was ever too tall for its box, so nothing ever
-       overflowed, so no scrollbar. Pinning the row to minmax(0, 1fr) makes it
-       exactly the height available instead, which is what finally gives the
-       deck an edge to overflow against. */
-    grid-template-rows: minmax(0, 1fr);
-  }
-
-  /* The scene panel becomes a column so the frame can absorb the slack. */
-  .panel-scene {
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-  }
-
-  .scene-frame { flex: 1 1 auto; min-height: 0; }
-
-  /* Height now comes from the layout, not from a fixed ratio. The 3D view
-     re-measures its container on every resize and adapts the camera to
-     whatever shape it is given, so it simply fills the space.
-
-     Filling the frame absolutely rather than with height:100% is deliberate:
-     a percentage height depends on the parent having resolved a definite one,
-     which a flex item that is still growing has not necessarily done. Pinning
-     to all four edges of the frame cannot be ambiguous, and a canvas measured
-     as zero is exactly the bug that produced the "blurry model" earlier. */
-  .scene-container {
-    position: absolute;
-    inset: 0;
-    aspect-ratio: auto;
-  }
-
-  /* The deck is the only thing that scrolls, and only here - in the stacked
-     phone layout it has no fixed height to overflow and the page scrolls
-     instead. The padding keeps the scrollbar off the buttons rather than
-     sitting on top of them. */
-  .deck {
-    overflow-y: auto;
-    min-height: 0;
-    padding-right: 6px;
-  }
-
-  /* EMERGENCY STOP must never scroll out of reach. It stays pinned to the top
-     of the deck while everything beneath it moves - the one control whose
-     whole purpose is being available the instant it is needed. */
-  .panel-safety {
-    position: sticky;
-    top: 0;
-    z-index: 3;
-    box-shadow: 0 8px 16px -6px rgba(0, 0, 0, 0.7);
-  }
-
-  .panel-log { flex: 0 0 auto; }
-}
-
-/* ============================================================
-   RESPONSIVE
-
-   Below 1000px the deck drops beneath the machine rather than beside it, and
-   the app shell above does not apply - the page goes back to scrolling as one
-   document. That is the right behaviour on a phone: side-by-side panes that
-   scroll separately are awkward on a small screen, and a phone has no
-   permanently-visible monitor to keep the machine on.
-
-   The scene also gets a taller aspect ratio, since a wide frame on a phone
-   would be barely a sliver.
-   ============================================================ */
-@media (max-width: 1000px) {
-  .layout { grid-template-columns: 1fr; }
-  .scene-container { aspect-ratio: 4 / 3; }
-  body { padding: 10px; padding-bottom: 24px; }
-  .minimap { width: 118px; height: 118px; left: 10px; bottom: 10px; }
-  .minimap-dial { width: 82px; height: 82px; }
-  .minimap-readout { font-size: 0.5rem; gap: 5px; }
-}
-
-/* Respect a request for less motion: drop the attention-seeking pulses. The
-   colour alone still communicates the state. */
-@media (prefers-reduced-motion: reduce) {
-  .banner-estop, .alm-light.fault .alm-bulb { animation: none; }
-  .mini-gantry, .mini-tool { transition: none; }
-}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; } }

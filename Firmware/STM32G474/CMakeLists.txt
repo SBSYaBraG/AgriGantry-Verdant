@@ -42,13 +42,12 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined library search paths
 )
 
-# Add sources to executable
+# Active bring-up application. Earlier tests and their IRQ callbacks stay in their baselines.
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    Core/Src/encoder_diag.c
-    Core/Src/interlock_diag.c
-    Core/Src/motor_test.c
+    Core/Src/pi_uart_diag.c
     Core/Src/multi_driver_diag.c
-    Core/Src/spi_diag.c
+    Core/Src/motor_test.c
+    Core/Src/encoder_diag.c
 )
 
 # Add include paths

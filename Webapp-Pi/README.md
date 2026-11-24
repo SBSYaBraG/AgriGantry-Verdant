@@ -1,8 +1,6 @@
 # AgriGantry web app and Raspberry Pi
 
-This directory contains the browser dashboard, the Raspberry Pi integration
-plan, and a preserved legacy controller. The dashboard currently operates only
-against simulated hardware; it does not command the physical AgriGantry.
+This directory contains the Pi-hosted browser dashboard, the integration plan for the Arduino gantry and a preserved legacy controller. A board-powered Pi 3 hosted the live Rev. 1 telemetry and supervised X-axis bench test. The garden simulator runs in its own profile.
 
 ## Start here
 
@@ -13,16 +11,11 @@ against simulated hardware; it does not command the physical AgriGantry.
 | `legacy_controller.py` | Earlier command-line prototype retained as reference only; not compatible with current manual calibration. |
 | `README_LEGACY_CONTROLLER.md` | Historical command reference for that legacy prototype. |
 
-## Current safety boundary
+## Dashboard profiles
 
-The browser dashboard must remain on `SimulatedHardware` until the planned Pi
-manual-calibration service has been implemented and tested. When physical
-integration begins, the Pi will be the only serial-port owner, the Mega will
-remain the only step-pulse and motion-safety authority, and the browser will
-request named service operations instead of talking to the Mega directly.
+The `stm32` profile reads COMM telemetry and offers a four-driver SPI scan. The `paired-x` profile adds one explicitly armed Test 15 move per STM32 boot. The controller generates the pulses and sends the measured result back through the Pi. The physical run used a phone on the LAN, a motor and encoder on X1, and an empty X2 motor socket. [Bench evidence](../Firmware/STM32G474/README.md#test-15-hardware-result)
 
-See [the integration plan](MANUAL_CALIBRATION_INTEGRATION.md) before adding a
-serial backend, scheduler, or dashboard button that could affect hardware.
+The `arduino` profile reads Mega telemetry over USB. Future scheduling and calibration work for that platform has its own [integration plan](MANUAL_CALIBRATION_INTEGRATION.md). The `simulated` profile provides general jogging, homing, garden tasks and demo alerts.
 
 ## Run the demonstration
 

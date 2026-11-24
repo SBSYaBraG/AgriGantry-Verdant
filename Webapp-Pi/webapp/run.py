@@ -8,11 +8,8 @@ Then open http://localhost:5000 on the Pi itself, or
 http://<pi-ip-address>:5000 from any phone or laptop on the same WiFi.
 (The Pi's address is printed at startup.)
 
-THIS is the file where you choose which machine you are driving. Right now it
-creates a SimulatedHardware, so nothing physical is involved and the interface
-can be developed and demonstrated anywhere. When the real machine is wired up,
-that single line becomes a serial-backed backend and nothing else in the
-project needs to change.
+Run this file for the simulator. run_stm32.py hosts telemetry over the PCB COMM
+header, and run_arduino.py hosts telemetry over USB. All three share main().
 """
 
 import os
@@ -49,10 +46,9 @@ def local_ip_address():
         return "127.0.0.1"
 
 
-def main():
-    # ---- Choose the hardware backend -------------------------------------
-    # Swap this line for a serial-backed backend when the Arduino is connected.
-    hardware = SimulatedHardware()
+def main(hardware=None):
+    if hardware is None:
+        hardware = SimulatedHardware()
     hardware.start()
 
     app, socketio = create_app(hardware)

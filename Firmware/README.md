@@ -122,15 +122,9 @@ wiring or uploading that target.
 
 ## Pi and dashboard boundary
 
-The Pi is planned to own serial-session management, scheduled endurance tests,
-and long-term logs. The Mega remains the only component that generates step
-pulses and enforces motion safety. A browser must call the Pi service; it must
-never directly open the Mega serial port or generate a trajectory.
+For the Mega workflow, the Arduino telemetry profile reads the controller over USB. Scheduled endurance tests and long-term logs are planned. The Mega generates its own step pulses. [Manual-calibration integration contract](../Webapp-Pi/MANUAL_CALIBRATION_INTEGRATION.md)
 
-The design contract and planned web-app interface are in
-[`../Webapp-Pi/MANUAL_CALIBRATION_INTEGRATION.md`](../Webapp-Pi/MANUAL_CALIBRATION_INTEGRATION.md).
-The current `Webapp-Pi/webapp` implementation remains a simulated dashboard until
-that service exists and has been validated.
+For the Rev. 1 board, the Pi owns the COMM UART and hosts the dashboard. The STM32 generates the steps, monitors the drivers and reports measured X1 encoder travel. This path passed the supervised phone-commanded Test 15 on the bench. [STM32 hardware result](STM32G474/README.md#test-15-hardware-result)
 
 ## Record changes
 

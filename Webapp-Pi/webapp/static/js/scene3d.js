@@ -71,7 +71,7 @@ const MODEL_TRAVEL = {
 // Camera directions use model coordinates: X is the machine width, Y is up,
 // and Z is the machine length. Each preset is selected by the view cube.
 const VIEW_PRESETS = {
-  iso:    { direction: [1, 1, 1],           up: [0, 1, 0] },
+  overview: { direction: [1.15, 0.38, 1],  up: [0, 1, 0] },
   top:    { direction: [0, 1, 0],          up: [0, 0, -1] },
   bottom: { direction: [0, -1, 0],         up: [0, 0, 1] },
   front:  { direction: [0, 0, 1],          up: [0, 1, 0] },
@@ -160,15 +160,12 @@ export function init(containerElement, modelUrl) {
   container = containerElement;
 
   scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xa8dafa);
 
   camera = new THREE.PerspectiveCamera(42, 1, 0.01, 100);
 
   renderer = new THREE.WebGLRenderer({
     antialias: true,
-    // The page behind the canvas provides the backdrop, so the canvas itself
-    // is transparent. That lets the CSS gradient show through and avoids
-    // painting a full-screen background colour every frame.
-    alpha: true,
     powerPreference: "high-performance"
   });
   // Cap the pixel ratio hard. Phones report 3x, which is nine times the pixels
@@ -183,7 +180,6 @@ export function init(containerElement, modelUrl) {
   // buffer to about 39% of the old 2x cap while remaining crisp at dashboard
   // viewing distance.
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
-  renderer.setClearColor(0x000000, 0);
   container.appendChild(renderer.domElement);
 
   controls = new OrbitControls(camera, renderer.domElement);
@@ -250,6 +246,37 @@ function addLighting() {
   scene.add(fill);
 }
 
+function addLawn(root) {
+  const bounds = new THREE.Box3().setFromObject(root);
+  const size = bounds.getSize(new THREE.Vector3());
+  const span = Math.max(size.x, size.z);
+  const tile = document.createElement("canvas");
+  tile.width = tile.height = 64;
+  const pen = tile.getContext("2d");
+  pen.fillStyle = "#98bc79";
+  pen.fillRect(0, 0, 64, 64);
+  // A small repeating tuft pattern costs two triangles for the entire lawn.
+  for (const [x, y] of [[5, 11], [24, 34], [46, 8], [38, 54], [57, 40], [9, 58]]) {
+    pen.strokeStyle = "#87ad6b";
+    pen.beginPath();
+    pen.moveTo(x - 2, y - 2);
+    pen.lineTo(x, y);
+    pen.lineTo(x + 2, y - 3);
+    pen.stroke();
+  }
+  const texture = new THREE.CanvasTexture(tile);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(320, 320);
+  const lawn = new THREE.Mesh(new THREE.PlaneGeometry(span * 80, span * 80),
+    new THREE.MeshBasicMaterial({map: texture, side: THREE.FrontSide}));
+  lawn.rotation.x = -Math.PI / 2;
+  bounds.getCenter(lawn.position);
+  lawn.position.y = bounds.min.y - span * 0.002;
+  scene.add(lawn);
+  scene.fog = new THREE.Fog(scene.background, span * 4, span * 24);
+}
+
 function loadModel(modelUrl) {
   return new Promise(function (resolve, reject) {
     new GLTFLoader().load(
@@ -275,6 +302,7 @@ function loadModel(modelUrl) {
 
         applyPalette(gltf.scene);
         configureTravel();
+        addLawn(gltf.scene);
 
         // Re-measure before framing. The panel may still have been settling
         // when init() ran, and frameCamera depends on camera.aspect being
@@ -356,8 +384,8 @@ function linearTravel(node, modelRange) {
  */
 function frameCamera(
   root,
-  direction = new THREE.Vector3(...VIEW_PRESETS.iso.direction),
-  up = new THREE.Vector3(...VIEW_PRESETS.iso.up)
+  direction = new THREE.Vector3(...VIEW_PRESETS.overview.direction),
+  up = new THREE.Vector3(...VIEW_PRESETS.overview.up)
 ) {
   const box = new THREE.Box3().setFromObject(root);
   const sphere = box.getBoundingSphere(new THREE.Sphere());
@@ -474,6 +502,9 @@ function applyStatus() {
   if (!ready || !pendingStatus || !machineConfig) { return false; }
 
   const axes = pendingStatus.axes;
+  if (pendingStatus.commands_enabled === false) {
+    if (!pendingStatus.hardware_connected || !["x", "y", "z"].every(id => axes[id]?.homed)) return false;
+  }
   const fx = fractionOf("x", axes.x);
   const fy = fractionOf("y", axes.y);
   const fz = fractionOf("z", axes.z);
@@ -511,6 +542,7 @@ function place(axisTravel, fraction) {
  */
 function fractionOf(axisId, axisState) {
   if (!axisState) { return 0; }
+  if (pendingStatus.commands_enabled === false) return clamp01(axisState.percent / 100);
 
   const axisConfig = machineConfig.axes[axisId];
   if (!axisConfig || !axisConfig.max_steps) {
@@ -578,7 +610,7 @@ function resize() {
 
 /** Reset the camera to its framing shot. */
 export function resetView() {
-  setView("top-front-right");
+  setView("overview");
 }
 
 /** Snap the camera to a face or diagonal selected on the view cube. */

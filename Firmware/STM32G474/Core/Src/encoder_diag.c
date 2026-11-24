@@ -95,9 +95,15 @@ static void Encoder_Diagnostic_UpdateLed(uint32_t now_ms)
                     (led_on != 0U) ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
-/**
-  * @brief  Starts a completely passive encoder observation.
-  */
+void Encoder_Diagnostic_StartCounter(void)
+{
+  encoder_diag_initialized = 0U;
+  encoder_diag_index_event_count = 0U;
+  __HAL_TIM_SET_COUNTER(&htim5, 0U);
+  encoder_diag_timer_start_status = HAL_TIM_Encoder_Start(&htim5, TIM_CHANNEL_ALL);
+  encoder_diag_initialized = (encoder_diag_timer_start_status == HAL_OK);
+}
+
 void Encoder_Diagnostic_Init(void)
 {
   uint32_t now_ms;
@@ -105,8 +111,6 @@ void Encoder_Diagnostic_Init(void)
   Encoder_Diagnostic_ForceSafeMotorState();
 
   encoder_diag_signature = ENCODER_DIAG_SIGNATURE_VALUE;
-  encoder_diag_initialized = 0U;
-  encoder_diag_timer_start_status = HAL_ERROR;
   encoder_diag_start_tick_ms = 0U;
   encoder_diag_last_sample_tick_ms = 0U;
   encoder_diag_raw_count = 0U;
@@ -115,15 +119,13 @@ void Encoder_Diagnostic_Init(void)
   encoder_diag_direction = ENCODER_DIAG_DIRECTION_STOPPED;
   encoder_diag_last_motion_direction = ENCODER_DIAG_DIRECTION_STOPPED;
   encoder_diag_sample_count = 0U;
-  encoder_diag_index_event_count = 0U;
   encoder_diag_last_index_tick_ms = 0U;
   encoder_diag_raw_count_at_last_index = 0U;
   encoder_diag_index_pin_level = (uint8_t)HAL_GPIO_ReadPin(MX1_ENC_Z_GPIO_Port, MX1_ENC_Z_Pin);
   encoder_diag_led_state = 0U;
 
   /* Establish a count origin without touching any motor-control peripheral. */
-  __HAL_TIM_SET_COUNTER(&htim5, 0U);
-  encoder_diag_timer_start_status = HAL_TIM_Encoder_Start(&htim5, TIM_CHANNEL_ALL);
+  Encoder_Diagnostic_StartCounter();
 
   now_ms = HAL_GetTick();
   encoder_diag_start_tick_ms = now_ms;
@@ -131,11 +133,6 @@ void Encoder_Diagnostic_Init(void)
   encoder_diag_last_heartbeat_tick_ms = now_ms;
   encoder_diag_raw_count = __HAL_TIM_GET_COUNTER(&htim5);
   encoder_diag_previous_raw_count = encoder_diag_raw_count;
-
-  if (encoder_diag_timer_start_status == HAL_OK)
-  {
-    encoder_diag_initialized = 1U;
-  }
 
   Encoder_Diagnostic_UpdateLed(now_ms);
 }
@@ -191,7 +188,7 @@ void Encoder_Diagnostic_Service(void)
   */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  if (GPIO_Pin == MX1_ENC_Z_Pin)
+  if (GPIO_Pin == MX1_ENC_Z_Pin && encoder_diag_initialized != 0U)
   {
     encoder_diag_index_event_count++;
     encoder_diag_last_index_tick_ms = HAL_GetTick();

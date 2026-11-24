@@ -1,534 +1,647 @@
-/* ============================================================
-   app.js - AgriGantry Control Interface, browser side
-
-   Two responsibilities, and deliberately nothing more:
-
-     1. Turn button presses into commands sent to the server
-     2. Redraw the interface whenever the server reports new machine state
-
-   What this file does NOT do is track the machine's position itself. Every
-   number and indicator you see is drawn from the last `status_update` the
-   server sent. That matters because several people can have this page open
-   at once - the monitor on the Pi, someone's phone in the garden - and if
-   each browser guessed at the state locally, those screens would drift out
-   of agreement with each other and with the machine. The server (and behind
-   it, the hardware) is the single source of truth; this page is a view of it.
-   ============================================================ */
-
-(function () {
+/* The simulator owns machine and garden state. Views change on status replies. */
+(() => {
   "use strict";
+  const $ = (id) => document.getElementById(id);
+  const all = (selector) => Array.from(document.querySelectorAll(selector));
+  const cfg = JSON.parse($("machine-config").textContent);
+  const axes = Object.keys(cfg.axes);
+  const spots = cfg.garden.spots;
+  const crops = cfg.garden.crops;
+  const motorNames = {XL: "Left X motor", XR: "Right X motor", Y: "Y motor", Z: "Z motor"};
+  const stageNames = {empty: "Empty", planned: "Planned", positioning: "Positioning", growing: "Growing", ready: "Ready to harvest"};
+  const socket = io({autoConnect: false});
+  const arrows = all("[data-axis]");
+  const homeButtons = all("[data-home]");
+  const seedButtons = all("[data-crop]");
+  const spotButtons = all("[data-spot]");
+  const demos = all("[data-alarm], [data-notice]");
+  const noticeButtons = Object.fromEntries(all("[data-notice]").map(b => [b.dataset.notice, b]));
+  const tabs = all("[data-page]");
+  const pages = {controls: "Gantry controls", garden: "Garden plan", tutorial: "Dashboard tutorial"};
+  const topics = all("[data-guide-topic]");
+  const conditionRows = all("[data-reading]");
+  let guideTopic = null;
+  let guideStep = 0;
+  let guideReturn = "controls";
+  let currentPage = "";
+  let status = null;
+  let receivedAt = 0;
+  let awaitingSnapshot = true;
+  let previousSnapshot = "";
+  let armToken = null;
+  let benchPending = false;
+  const activePhases = ["armed", "queued", "starting", "running", "stopping"];
+  const trajectoryPhases = ["starting", "running", "stopping"];
+  let activeSpot = Object.keys(spots)[0];
+  let pickedCrop = null;
+  let targetKey = "";
+  let alertKey = "";
+  let gardenKey = "";
+  let feedbackTimer;
+  window.farmbotConfig = cfg;
+  window.dispatchEvent(new CustomEvent("farmbot:config", {detail: cfg}));
+  document.documentElement.style.setProperty("--bed-ratio",
+    cfg.axes[cfg.bed_map.length].travel_mm / cfg.axes[cfg.bed_map.width].travel_mm);
 
-  // ---------- Connection ----------
-  // Connects back to whichever host served this page, so the same code works
-  // at localhost on the Pi and at the Pi's LAN address from a phone.
-  const socket = io();
-
-  // Machine geometry, fetched once from /api/config. Held here so the render
-  // functions can convert step counts into positions on screen.
-  let machineConfig = null;
-
-  // Per-axis: may this axis currently be driven? Set from the homed flag in
-  // each status update, and combined with the emergency-stop state in
-  // applyControlAvailability(). Kept out here so both renderers can see it.
-  const axisMovable = {};
-  const axisAlarmed = {};
-
-  // ---------- Element references ----------
-  const el = {
-    connDot:     document.getElementById("conn-dot"),
-    connText:    document.getElementById("conn-text"),
-    modeBadge:   document.getElementById("mode-badge"),
-    estopBanner: document.getElementById("estop-banner"),
-    almBanner:   document.getElementById("alm-banner"),
-    miniBed:     document.getElementById("mini-bed"),
-    miniGantry:  document.getElementById("mini-gantry"),
-    miniTool:    document.getElementById("mini-tool"),
-    miniX:       document.getElementById("mini-x"),
-    miniY:       document.getElementById("mini-y"),
-    miniZ:       document.getElementById("mini-z"),
-    axisControls: document.getElementById("axis-controls"),
-    almLights:   document.getElementById("alm-lights"),
-    devButtons:  document.getElementById("dev-alm-buttons"),
-    log:         document.getElementById("log"),
-    btnEstop:    document.getElementById("btn-estop"),
-    btnResume:   document.getElementById("btn-resume"),
-    btnHomeAll:  document.getElementById("btn-home-all"),
-    btnClearAlm: document.getElementById("btn-clear-alm")
-  };
-
-  /* ============================================================
-     STARTUP
-
-     Fetch the machine geometry first, then build the parts of the interface
-     that depend on it. Nothing is hardcoded about the machine's size or how
-     many axes and motors it has - it is all read from the server, which in
-     turn reads it from config.py. Resize the machine there and this page
-     reshapes itself with no changes here.
-     ============================================================ */
-  fetch("/api/config")
-    .then(function (response) { return response.json(); })
-    .then(function (cfg) {
-      machineConfig = cfg;
-      applyBedProportions(cfg);
-      buildAxisControls(cfg);
-      buildAlmLights(cfg);
-      buildDevButtons(cfg);
-
-      // Publish for the 3D view. Stored on window as well as dispatched,
-      // because the 3D view loads lazily and may only start up long after
-      // this event has been and gone - it needs to be able to catch up.
-      window.farmbotConfig = cfg;
-      window.dispatchEvent(new CustomEvent("farmbot:config", { detail: cfg }));
-    })
-    .catch(function (err) {
-      appendLog("[web] Failed to load machine configuration: " + err.message);
-    });
-
-  /**
-   * Draw the minimap's bed at the machine's true proportions.
-   *
-   * A long, narrow bed should look long and narrow; a square one should look
-   * square. Deriving the aspect ratio from real travel distances keeps the
-   * plan honest, so a glance at it corresponds to the real garden.
-   *
-   * Which axis is the length and which the width comes from the server
-   * (config.BED_MAP), never from an assumption here. On our machine Y is the
-   * long axis and X the short one - the reverse of stock FarmBot - and an
-   * assumption baked into this file would draw a plan that looked entirely
-   * reasonable while putting the tool head in the wrong place.
-   */
-  function applyBedProportions(cfg) {
-    const lengthMm = cfg.axes[cfg.bed_map.length].travel_mm;
-    const widthMm  = cfg.axes[cfg.bed_map.width].travel_mm;
-    el.miniBed.style.aspectRatio = lengthMm + " / " + widthMm;
-  }
-
-  /* ============================================================
-     BUILDING THE CONTROLS
-     ============================================================ */
-
-  /**
-   * Create a control panel for each axis: jog buttons, a custom-distance
-   * field, absolute-position shortcuts, and a home button.
-   *
-   * Jog distances are in millimetres rather than steps because that is what
-   * the operator can actually picture. The server converts to steps.
-   */
-  function buildAxisControls(cfg) {
-    // Millimetres. Laid out as two rows so each negative step sits above its
-    // positive twin: -100/-10/-1 over +100/+10/+1.
-    const JOG_ROWS = [
-      [-100, -10, -1],
-      [100, 10, 1]
-    ];
-
-    Object.keys(cfg.axes).forEach(function (axisId) {
-      const axis = cfg.axes[axisId];
-
-      const panel = document.createElement("div");
-      panel.className = "panel axis-panel";
-
-      // --- Header: axis name and whether it has been homed ---
-      const head = document.createElement("div");
-      head.className = "axis-head";
-
-      const name = document.createElement("span");
-      name.className = "axis-name";
-      name.textContent = axis.label;
-
-      const badge = document.createElement("span");
-      badge.className = "homed-badge";
-      badge.id = "homed-" + axisId;
-      badge.textContent = "NOT HOMED";
-
-      head.appendChild(name);
-      head.appendChild(badge);
-      panel.appendChild(head);
-
-      // Live position, in the panel for the axis it belongs to. The minimap
-      // gives the at-a-glance picture; this is where the exact figure lives.
-      const readout = document.createElement("div");
-      readout.className = "axis-readout";
-      readout.innerHTML =
-        '<span class="axis-mm" id="posval-' + axisId + '">0.0 mm</span>' +
-        '<span class="axis-sub" id="possub-' + axisId + '">0 steps · 0%</span>';
-      panel.appendChild(readout);
-
-      // --- Jog buttons ---
-      //
-      // Two rows of three rather than one row of six: the negative steps sit
-      // directly above their positive counterparts, so -10 and +10 line up in
-      // the same column. That makes the pair easy to find without reading,
-      // which is the point when you are nudging a machine by hand.
-      JOG_ROWS.forEach(function (row) {
-        const jogRow = document.createElement("div");
-        jogRow.className = "jog-row";
-
-        row.forEach(function (mm) {
-          const button = document.createElement("button");
-          button.className = "btn axis-btn";
-          // Tagged with its axis so the renderer can disable just this axis's
-          // controls while that axis is unhomed.
-          button.dataset.axis = axisId;
-          // Explicit sign, so direction is never ambiguous.
-          button.textContent = (mm > 0 ? "+" : "") + mm;
-          button.addEventListener("click", function () {
-            socket.emit("move_relative", { axis: axisId, mm: mm });
-          });
-          jogRow.appendChild(button);
-        });
-
-        panel.appendChild(jogRow);
-      });
-
-      // --- Absolute position shortcuts ---
-      const absRow = document.createElement("div");
-      absRow.className = "abs-row";
-
-      [25, 50, 75].forEach(function (percent) {
-        const button = document.createElement("button");
-        button.className = "btn btn-small axis-btn";
-        button.dataset.axis = axisId;
-        button.textContent = percent + "%";
-        button.addEventListener("click", function () {
-          socket.emit("move_absolute", { axis: axisId, percent: percent });
-        });
-        absRow.appendChild(button);
-      });
-
-      // Per-axis home button. It does not use data-axis, because homing must
-      // remain available while unhomed. Its separate data-home-axis tag lets
-      // an ALM disable it when the physical mechanism cannot move safely.
-      const homeButton = document.createElement("button");
-      homeButton.className = "btn btn-small axis-btn";
-      homeButton.dataset.homeAxis = axisId;
-      homeButton.textContent = "HOME";
-      homeButton.addEventListener("click", function () {
-        socket.emit("home_axis", { axis: axisId });
-      });
-      absRow.appendChild(homeButton);
-
-      panel.appendChild(absRow);
-      el.axisControls.appendChild(panel);
-    });
-  }
-
-  /**
-   * Create one indicator light per motor.
-   *
-   * The motor list comes from the server, which builds it from config.py.
-   * This is why the interface currently shows four lights (X, YL, YR, Z) - it
-   * is reflecting the machine's actual motor configuration rather than an
-   * assumption made here. Add or remove a motor in config.py and the row of
-   * lights follows with no edit to this file.
-   */
-  function buildAlmLights(cfg) {
-    cfg.motors.forEach(function (motorName) {
-      const light = document.createElement("div");
-      light.className = "alm-light";
-      light.id = "alm-" + motorName;
-
-      const bulb = document.createElement("div");
-      bulb.className = "alm-bulb";
-
-      const label = document.createElement("div");
-      label.className = "alm-name";
-      label.textContent = motorName;
-
-      light.appendChild(bulb);
-      light.appendChild(label);
-      el.almLights.appendChild(light);
-    });
-  }
-
-  /** Simulation-only: one fault-injection button per motor. */
-  function buildDevButtons(cfg) {
-    cfg.motors.forEach(function (motorName) {
-      const button = document.createElement("button");
-      button.className = "btn btn-small";
-      button.textContent = "Fault " + motorName;
-      button.addEventListener("click", function () {
-        socket.emit("inject_alm", { motor: motorName });
-      });
-      el.devButtons.appendChild(button);
-    });
-  }
-
-  /* ============================================================
-     RENDERING MACHINE STATE
-
-     Called every time the server broadcasts, roughly 8 times a second.
-     ============================================================ */
-
-  socket.on("status_update", function (status) {
-    // Guard: broadcasts can arrive before /api/config has resolved.
-    if (!machineConfig) { return; }
-
-    renderMode(status);
-    renderBedMap(status);
-    renderPositions(status);
-    renderAlarms(status);
-    renderEmergencyStop(status);
-
-    // Hand the very same payload to the 3D view, so both views are drawing
-    // one shared truth rather than two independent interpretations of it.
-    window.farmbotStatus = status;
-    window.dispatchEvent(new CustomEvent("farmbot:status", { detail: status }));
-  });
-
-  /** Show whether we are driving a simulation or the real machine. */
-  function renderMode(status) {
-    const isSimulated = status.mode === "simulated";
-    el.modeBadge.textContent = status.mode.toUpperCase();
-    el.modeBadge.className = "badge " + (isSimulated ? "badge-sim" : "badge-live");
-  }
-
-  /**
-   * Position the gantry and tool head on the bed map.
-   *
-   * Positions are expressed as percentages of each axis's travel, which is
-   * exactly what CSS needs, and means the map stays correct no matter what
-   * pixel size the bed is rendered at on a given screen.
-   */
-  function renderBedMap(status) {
-    // Which axis plays which role on the plan, as declared by the server.
-    const lengthAxis = machineConfig.bed_map.length;
-    const widthAxis  = machineConfig.bed_map.width;
-    const heightAxis = machineConfig.bed_map.height;
-
-    // The gantry slides along the bed's LENGTH, drawn horizontally, so the
-    // length axis drives its `left`.
-    const alongPercent = travelPercent(lengthAxis, status.axes[lengthAxis]);
-    el.miniGantry.style.left = alongPercent + "%";
-
-    // The tool head rides on the gantry (so it shares the gantry's position
-    // along the bed) and slides across the bed's WIDTH, drawn vertically.
-    const acrossPercent = travelPercent(widthAxis, status.axes[widthAxis]);
-    el.miniTool.style.left = alongPercent + "%";
-    el.miniTool.style.top  = acrossPercent + "%";
-
-    // Numeric readout beneath the dial. Rounded to whole millimetres: the
-    // minimap is for a glance, and the per-axis panels carry the precision.
-    el.miniX.textContent = "X " + Math.round(status.axes.x.mm);
-    el.miniY.textContent = "Y " + Math.round(status.axes.y.mm);
-    el.miniZ.textContent = "Z " + Math.round(status.axes[heightAxis].mm);
-  }
-
-  /**
-   * Position as a percentage of travel, recomputed from raw steps rather
-   * than using the integer `percent` the server sends.
-   *
-   * The server rounds that field to a whole number, which is fine for a text
-   * readout but would make the tool head visibly jump between 1%-wide
-   * positions as it travels - on a 2.7 m bed that is a 27 mm hop per update.
-   * Recomputing here gives a fractional percentage and therefore smooth
-   * motion on screen.
-   */
-  function travelPercent(axisId, axisState) {
-    const maxSteps = machineConfig.axes[axisId].max_steps;
-    if (!maxSteps) { return 0; }
-
-    const pct = (axisState.steps / maxSteps) * 100;
-    // Clamp so a rounding artefact can never push the marker off the map.
-    return Math.max(0, Math.min(100, pct));
-  }
-
-  /** Update the numeric readouts and the per-axis HOMED badges. */
-  function renderPositions(status) {
-    Object.keys(status.axes).forEach(function (axisId) {
-      const axis = status.axes[axisId];
-
-      const valueEl = document.getElementById("posval-" + axisId);
-      const subEl   = document.getElementById("possub-" + axisId);
-      const badgeEl = document.getElementById("homed-" + axisId);
-
-      if (valueEl) {
-        valueEl.textContent = axis.mm.toFixed(1) + " mm";
-      }
-      if (subEl) {
-        subEl.textContent = axis.steps + " steps · " + axis.percent + "%";
-      }
-      if (badgeEl) {
-        // Three states, not two: an axis part-way through its homing sequence
-        // is neither homed nor idle, and saying "NOT HOMED" while it is
-        // visibly travelling reads as though nothing is happening.
-        if (axis.homed) {
-          badgeEl.textContent = "HOMED";
-        } else if (axis.moving) {
-          badgeEl.textContent = "HOMING…";
-        } else {
-          badgeEl.textContent = "NOT HOMED";
-        }
-        badgeEl.classList.toggle("is-homed", axis.homed);
-      }
-
-      // Record whether this axis may be driven. Actually applying it to the
-      // buttons happens in applyControlAvailability(), which combines this
-      // with the emergency-stop state - the two rules must compose, not
-      // overwrite each other.
-      axisMovable[axisId] = axis.homed;
-    });
-  }
-
-  /** Light up motor alarm indicators and show the alarm banner. */
-  function renderAlarms(status) {
-    const faultedMotors = [];
-
-    Object.keys(status.alm).forEach(function (motorName) {
-      const faulted = status.alm[motorName];
-      if (faulted) { faultedMotors.push(motorName); }
-
-      const light = document.getElementById("alm-" + motorName);
-      if (!light) { return; }
-
-      light.classList.toggle("fault", faulted);
-      light.classList.toggle("ok", !faulted);
-    });
-
-    // One driver ALM halts the entire machine, so every axis is unavailable
-    // until all alarms are cleared.
-    Object.keys(machineConfig.axes).forEach(function (axisId) {
-      axisAlarmed[axisId] = faultedMotors.length > 0;
-    });
-
-    if (faultedMotors.length) {
-      el.almBanner.textContent =
-        "MOTOR ALARM — ALL MACHINE MOVEMENT IS HALTED until every ALM is " +
-        "cleared. Faulted driver" + (faultedMotors.length > 1 ? "s: " : ": ") +
-        faultedMotors.join(", ") + ".";
+  function navigate() {
+    const [name, topicKey, step] = location.hash.slice(1).split("/");
+    const page = Object.hasOwn(pages, name) ? name : "controls";
+    const leavingGuide = currentPage === "tutorial" && page !== "tutorial";
+    if (page === "tutorial" && currentPage && currentPage !== "tutorial") {
+      guideReturn = currentPage === "garden" ? "garden/" + activeSpot : currentPage;
     }
-    el.almBanner.classList.toggle("hidden", !status.alm_critical);
+    for (const id of Object.keys(pages)) $(id + "-page").hidden = id !== page;
+    $("page-title").textContent = pages[page];
+    tabs.forEach(link => {
+      if (link.dataset.page === page) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    });
+    if (page === "tutorial") {
+      $("guide-close").href = "#" + guideReturn;
+      showGuide(topicKey, step);
+    } else {
+      if (page === "garden" && Object.hasOwn(spots, topicKey) && activeSpot !== topicKey) chooseSpot(topicKey, null);
+      if (leavingGuide) tabs.find(link => link.dataset.page === page).focus();
+    }
+    currentPage = page;
+    window.dispatchEvent(new CustomEvent("farmbot:page", {detail: page}));
+  }
+  window.addEventListener("hashchange", navigate);
+  navigate();
+
+  function showGuide(topicKey, step) {
+    guideTopic = topics.find(topic => topic.dataset.guideTopic === topicKey);
+    for (const topic of topics) topic.hidden = topic !== guideTopic;
+    $("guide-index").hidden = Boolean(guideTopic);
+    $("guide-reader").hidden = !guideTopic;
+    $("guide-title").textContent = guideTopic?.dataset.title || "Choose a topic";
+    if (!guideTopic) {
+      if (currentPage) $("guide-title").focus();
+      return;
+    }
+    const slides = guideTopic.querySelectorAll(".guide-slide");
+    const selected = Number(step || 1);
+    guideStep = Number.isInteger(selected) ? Math.max(0, Math.min(selected - 1, slides.length - 1)) : 0;
+    slides.forEach((slide, index) => { slide.hidden = index !== guideStep; });
+    $("guide-prev").disabled = guideStep === 0;
+    $("guide-next").textContent = guideStep === slides.length - 1 ? "Finish topic" : "Next";
+    if (currentPage) slides[guideStep].querySelector("h3").focus();
+  }
+  function turnGuidePage(delta) {
+    if (!guideTopic) return;
+    const next = guideStep + delta;
+    if (next < 0) return;
+    location.hash = next >= guideTopic.querySelectorAll(".guide-slide").length ? "tutorial"
+      : "tutorial/" + guideTopic.dataset.guideTopic + "/" + (next + 1);
+  }
+  $("guide-prev").addEventListener("click", () => turnGuidePage(-1));
+  $("guide-next").addEventListener("click", () => turnGuidePage(1));
+  document.addEventListener("keydown", event => {
+    if (currentPage !== "tutorial" || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      location.hash = guideReturn;
+      return;
+    }
+    if (!guideTopic || !$("tutorial-page").contains(event.target) || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    turnGuidePage(event.key === "ArrowLeft" ? -1 : 1);
+  });
+
+  function fresh() {
+    return Boolean(socket.connected && !awaitingSnapshot && status && Date.now() - receivedAt < 3500);
   }
 
-  /**
-   * Reflect the emergency stop: show the banner and disable everything that
-   * could command motion.
-   *
-   * Disabling the controls is not merely cosmetic. While the stop is latched
-   * the machine refuses movement commands anyway, so leaving the buttons live
-   * would let an operator press them repeatedly and conclude the interface
-   * had frozen. Greying them out says plainly: the machine is stopped, and
-   * RESUME is the way out.
-   */
-  function renderEmergencyStop(status) {
-    const stopped = status.emergency_stop;
-
-    el.estopBanner.classList.toggle("hidden", !stopped);
-    const anyAlarm = Object.keys(axisAlarmed).some(
-      function (axisId) { return axisAlarmed[axisId]; }
-    );
-    el.btnHomeAll.disabled = stopped || anyAlarm;
-
-    // The stop button itself is pointless once already stopped; RESUME is
-    // pointless until you are.
-    el.btnEstop.disabled = stopped;
-    el.btnResume.disabled = !stopped;
-
-    applyControlAvailability(stopped);
+  function showFeedback(message) {
+    $("feedback").textContent = message;
+    $("feedback").hidden = false;
+    clearTimeout(feedbackTimer);
+    feedbackTimer = setTimeout(() => { $("feedback").hidden = true; }, 4500);
   }
 
-  /**
-   * Decide which controls are usable from all safety rules at once.
-   *
-   * A control is enabled only if the machine is not emergency-stopped AND its
-   * axis is homed. These are applied together in one place because they were
-   * previously applied in two, and whichever ran last silently undid the
-   * other - an unhomed axis would have its buttons re-enabled the moment the
-   * emergency stop was cleared.
-   *
-   * Per-axis HOME buttons use data-home-axis rather than data-axis so homing
-   * remains available while unhomed. A machine-wide ALM still disables every
-   * movement and homing control.
-   */
-  function applyControlAvailability(stopped) {
-    document.querySelectorAll(".axis-btn").forEach(function (button) {
-      const axisId = button.dataset.axis;
-      const homeAxisId = button.dataset.homeAxis;
-      const moveReady = !axisId || (
-        axisMovable[axisId] && !axisAlarmed[axisId]
-      );
-      const homeReady = !homeAxisId || !axisAlarmed[homeAxisId];
-      button.disabled = stopped || !moveReady || !homeReady;
+  function request(event, data) {
+    if (status?.commands_enabled !== false && socket.connected && (event === "emergency_stop" || fresh())) socket.emit(event, data);
+  }
+
+  function benchCommand(action) {
+    if (!socket.connected) return;
+    if (action !== "stop" && (benchPending || document.hidden)) return;
+    const sid = socket.id;
+    if (action !== "stop") benchPending = true;
+    render();
+    socket.timeout(3000).emit("paired_x", {action, token: armToken}, (timeout, reply) => {
+      if (socket.id !== sid) return;
+      benchPending = false;
+      if (timeout || !reply?.ok) showFeedback(reply?.error || "No acknowledgement. Check controller status.");
+      if (action === "arm" && reply?.ok) armToken = reply.token;
+      if (action === "stop") armToken = null;
+      render();
+    });
+  }
+  $("paired-arm").addEventListener("click", () => benchCommand("arm"));
+  $("paired-move").addEventListener("click", () => benchCommand("move"));
+  $("paired-stop").addEventListener("click", () => benchCommand("stop"));
+  setInterval(() => {
+    if (!armToken || !socket.connected) return;
+    if (document.hidden || currentPage !== "controls") {
+      benchCommand("stop");
+      armToken = null;
+    } else socket.volatile.emit("paired_x", {action: "watch", token: armToken});
+  }, 350);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && armToken) { benchCommand("stop"); armToken = null; }
+  });
+
+  $("scan-drivers").addEventListener("click", () => {
+    $("scan-drivers").disabled = true;
+    socket.timeout(4000).emit("scan_drivers", {}, (timeout, reply) => {
+      if (timeout || !reply?.ok) showFeedback(reply?.error || "Scan acknowledgement unavailable. Check the latest driver report.");
+    });
+  });
+
+  function preview(action, fields = {}, onSuccess) {
+    if (!fresh() || status.mode !== "simulated") return;
+    socket.timeout(5000).emit("garden_preview", {action, ...fields}, (timeout, reply) => {
+      if (timeout || !reply) return showFeedback("No confirmation received. Check the current spot before retrying.");
+      if (!reply.ok) return showFeedback(reply.error);
+      if (onSuccess) onSuccess();
     });
   }
 
-  /* ============================================================
-     GLOBAL CONTROLS
-     ============================================================ */
-
-  el.btnEstop.addEventListener("click", function () {
-    socket.emit("emergency_stop");
+  arrows.forEach(button => button.addEventListener("click", () => {
+    request("move_relative", {axis: button.dataset.axis, mm: Number(button.dataset.sign) * Number($("jog-distance").value)});
+  }));
+  homeButtons.forEach(button => button.addEventListener("click", () => request("home_axis", {axis: button.dataset.home})));
+  $("btn-home-all").addEventListener("click", () => request("home_all"));
+  $("btn-estop").addEventListener("click", () =>
+    status?.paired_x ? benchCommand("stop") : request("emergency_stop"));
+  $("btn-resume").addEventListener("click", () => request("resume"));
+  $("clear-alerts").addEventListener("click", () => preview("clear_alerts"));
+  $("jump-alerts").addEventListener("click", () => {
+    $("alerts-panel").scrollIntoView({block: "center"});
+    $("alerts-title").focus({preventScroll: true});
   });
 
-  el.btnResume.addEventListener("click", function () {
-    socket.emit("resume");
+  function triggerNotice(action, spot) {
+    if (["harvest_ready", "low_moisture", "demo_plant"].includes(action)) {
+      const crop = status.garden.spots[spot].crop;
+      const label = (crops[crop] || "Radish") + " in " + spot;
+      const messages = {harvest_ready: label + " is ready to harvest.", low_moisture: label + " needs water.", demo_plant: label + " is growing in the demo."};
+      preview(action, {spot, crop}, () => showFeedback(messages[action]));
+    } else {
+      preview(action, {}, () => showFeedback(action === "high_temperature" ? "High temperature is active for the whole bed." : "Sample bed readings are on."));
+    }
+  }
+  demos.forEach(button => button.addEventListener("click", () => {
+    if (button.dataset.alarm) return request("inject_alm", {motor: button.dataset.alarm});
+    triggerNotice(button.dataset.notice, activeSpot);
+  }));
+  $("demo-spot").addEventListener("change", () => chooseSpot($("demo-spot").value, null));
+
+  function updateSelection() {
+    seedButtons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.crop === pickedCrop)));
+    $("seed-hint").textContent = pickedCrop ? "Choose a spot for " + crops[pickedCrop].toLowerCase() + "."
+      : "Drag a seed to a spot, or select it and tap the spot.";
+  }
+  seedButtons.forEach(button => {
+    const crop = button.dataset.crop;
+    button.addEventListener("click", () => {
+      pickedCrop = pickedCrop === crop ? null : crop;
+      updateSelection();
+    });
+    button.addEventListener("dragstart", event => {
+      if (!fresh() || button.disabled) { event.preventDefault(); return; }
+      event.dataTransfer.setData("text/plain", crop);
+      event.dataTransfer.effectAllowed = "copy";
+    });
   });
 
-  el.btnHomeAll.addEventListener("click", function () {
-    socket.emit("home_all");
+  function chooseSpot(id, crop) {
+    activeSpot = id;
+    $("demo-spot").value = id;
+    if (location.hash.split("/")[0] === "#garden" && location.hash !== "#garden/" + id) {
+      window.history.replaceState(null, "", "#garden/" + id);
+    }
+    render();
+    if (!crop) return;
+    preview("plan", {spot: id, crop}, () => {
+      pickedCrop = null;
+      updateSelection();
+      showFeedback(crops[crop] + " planned for " + id + ".");
+    });
+  }
+
+  spotButtons.forEach(button => {
+    const id = button.dataset.spot;
+    button.addEventListener("click", () => chooseSpot(id, pickedCrop));
+    button.addEventListener("dragover", event => {
+      if (!fresh() || status.mode !== "simulated") return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+      button.classList.add("drag-over");
+    });
+    button.addEventListener("dragleave", () => button.classList.remove("drag-over"));
+    button.addEventListener("drop", event => {
+      event.preventDefault();
+      button.classList.remove("drag-over");
+      const crop = event.dataTransfer.getData("text/plain");
+      if (Object.hasOwn(crops, crop)) chooseSpot(id, crop);
+    });
   });
 
-  el.btnClearAlm.addEventListener("click", function () {
-    socket.emit("clear_alm");
+  $("placement-form").noValidate = true;
+  $("placement-form").addEventListener("submit", event => {
+    event.preventDefault();
+    if ($("place-seed").disabled) return;
+    const form = event.currentTarget;
+    if (!form.checkValidity()) {
+      form.querySelector("details").open = true;
+      form.reportValidity();
+      return;
+    }
+    const target = Object.fromEntries(axes.map(id => [id, $("target-" + id).valueAsNumber]));
+    preview("place", {spot: activeSpot, crop: status.garden.spots[activeSpot].crop, target});
   });
-
-  /* ============================================================
-     EVENT LOG
-     ============================================================ */
-
-  socket.on("log", function (payload) {
-    (payload.lines || []).forEach(appendLog);
+  $("remove-seed").addEventListener("click", () => {
+    const plant = status.garden.spots[activeSpot];
+    preview("remove", {spot: activeSpot, crop: plant.crop});
   });
+  $("mark-watered").addEventListener("click", () => {
+    preview("mark_watered", {spot: activeSpot, crop: status.garden.spots[activeSpot].crop});
+  });
+  $("mark-ready").addEventListener("click", () => triggerNotice("harvest_ready", activeSpot));
 
-  /**
-   * Append a line to the on-screen log.
-   *
-   * Lines are colour-coded by their content so that the messages that matter
-   * are findable in a busy log, and the list is capped so a long session
-   * cannot grow the DOM without limit.
-   */
+  function plantTasks(beds) {
+    const tasks = [];
+    for (const [spot, plant] of Object.entries(beds || {})) {
+      if (plant.stage === "ready") tasks.push({spot, title: crops[plant.crop] + " ready to harvest", tone: "info"});
+      if (plant.needs_water) tasks.push({spot, title: crops[plant.crop] + " needs water", tone: "warning"});
+    }
+    return tasks;
+  }
+
+  function renderGarden(online, canMove, tasks) {
+    const garden = status?.garden;
+    const available = online && status.mode === "simulated" && Boolean(garden);
+    spotButtons.forEach(button => { button.disabled = !garden; });
+    seedButtons.forEach(b => { b.disabled = !available; });
+    demos.forEach(b => { b.disabled = !available; });
+    $("demo-tools").hidden = status?.mode !== "simulated" || !garden;
+    $("demo-spot").disabled = !available;
+    $("clear-alerts").disabled = !available || !(garden.notices.length || status.alm_critical || Object.values(garden.spots).some(p => p.needs_water));
+    if (!garden) {
+      if (status && status.mode !== "simulated") {
+        $("bed-total").textContent = "No planting data";
+        $("plant-help").textContent = "Planting data is unavailable from this controller.";
+        $("selected-stage").textContent = "No reading";
+        spotButtons.forEach(button => { button.querySelector(".spot-crop").textContent = "No reading"; });
+      }
+      $("place-seed").disabled = true;
+      $("remove-seed").disabled = true;
+      $("mark-watered").disabled = true;
+      $("mark-ready").disabled = true;
+      axes.forEach(id => { $("target-" + id).disabled = true; });
+      return;
+    }
+
+    const key = JSON.stringify([garden.spots, activeSpot]);
+    if (key !== gardenKey) {
+      gardenKey = key;
+      spotButtons.forEach(button => {
+        const id = button.dataset.spot;
+        const plant = garden.spots[id];
+        const art = button.querySelector(".spot-art");
+        button.setAttribute("aria-pressed", String(id === activeSpot));
+        const name = crops[plant.crop] || "Empty";
+        const count = tasks.filter(task => task.spot === id).length;
+        const badge = button.querySelector(".spot-count");
+        badge.hidden = !count;
+        badge.textContent = count;
+        button.setAttribute("aria-label", ["Spot " + id, name, stageNames[plant.stage], count ? count + (count === 1 ? " task" : " tasks") : ""].filter(Boolean).join(", "));
+        $("demo-spot").querySelector('option[value="' + id + '"]').textContent = id + " · " + name;
+        art.className = "spot-art" + (plant.crop ? " crop-art crop-" + plant.crop : "");
+        art.textContent = plant.crop ? "" : "+";
+        button.querySelector(".spot-crop").textContent = name;
+        button.querySelector(".spot-stage").textContent = plant.crop ? stageNames[plant.stage] : "";
+      });
+      const used = Object.values(garden.spots).filter(plant => plant.crop).length;
+      $("bed-total").textContent = used + " / " + spotButtons.length + " spots in use";
+    }
+
+    // The bed tile, demo selector and spot actions share one selection.
+    if ($("demo-spot").value !== activeSpot) $("demo-spot").value = activeSpot;
+    const selected = garden.spots[activeSpot];
+    const canPreviewCare = available && cfg.garden.plant_tasks === true;
+    const canNotify = canPreviewCare && ["growing", "ready"].includes(selected?.stage);
+    const addDemo = noticeButtons.demo_plant;
+    addDemo.hidden = !canPreviewCare || !["empty", "planned"].includes(selected?.stage);
+    addDemo.disabled = addDemo.hidden;
+    addDemo.textContent = selected?.stage === "planned" ? "Preview growing " + crops[selected.crop].toLowerCase() : "Add demo radish";
+    noticeButtons.harvest_ready.disabled = !canNotify || selected.stage === "ready";
+    noticeButtons.low_moisture.disabled = !canNotify || selected.needs_water;
+    noticeButtons.sample_conditions.disabled = !canPreviewCare;
+    const hint = $("demo-plant-hint");
+    hint.hidden = !available || canNotify;
+    if (!hint.hidden) hint.textContent = !canPreviewCare ? "This session uses an earlier simulator. Press Run in start_dashboard.py to open the current dashboard."
+      : selected?.stage === "empty" ? "Add a demo plant here to try a task immediately."
+      : selected?.stage === "planned" ? "Preview this seed as grown to try a task without moving the gantry." : "Wait for placement to finish.";
+
+    const plant = garden.spots[activeSpot];
+    const planned = plant.stage === "planned";
+    const homed = axes.every(id => status.axes[id].homed);
+    const idle = !garden.active && axes.every(id => !status.axes[id].moving && !status.axes[id].homing);
+    $("placement-title").textContent = "Spot " + activeSpot;
+    $("selected-stage").textContent = stageNames[plant.stage];
+    $("plant-name").textContent = crops[plant.crop] || "Choose a seed";
+    const help = {empty: "Select a seed, then tap this spot.", positioning: "The simulator is moving to the target.",
+      growing: status.mode === "simulated" ? "You can mark this plant ready immediately in the simulation." : "This plant is growing.",
+      ready: "Mark harvested to free this spot."};
+    let message = help[plant.stage];
+    if (planned) {
+      if (!online) message = "Waiting for a fresh update.";
+      else if (!canMove) message = "Clear the stop or motor alarm before placing.";
+      else if (!homed) message = "Home X, Y and Z before placing.";
+      else if (!idle) message = "Wait for the current move to finish.";
+      else message = "Place seed moves the simulator to this spot’s target.";
+    }
+    $("plant-help").textContent = plant.needs_water ? "Soil moisture is low here. Mark watered after tending this plant." : message;
+    $("mark-watered").hidden = !plant.needs_water;
+    $("mark-watered").disabled = !available || !plant.needs_water;
+    $("mark-ready").hidden = plant.stage !== "growing" || status.mode !== "simulated";
+    $("mark-ready").disabled = !canPreviewCare || plant.stage !== "growing";
+    $("place-seed").hidden = !planned && plant.stage !== "empty";
+    $("remove-seed").hidden = !planned && plant.stage !== "ready";
+    $("place-seed").disabled = !(available && planned && canMove && homed && idle);
+    $("remove-seed").disabled = !(available && (planned || plant.stage === "ready"));
+    $("remove-seed").textContent = plant.stage === "ready" ? "Mark harvested" : "Remove plan";
+
+    const formKey = JSON.stringify([activeSpot, plant.crop, plant.target]);
+    axes.forEach(id => {
+      const field = $("target-" + id);
+      field.disabled = !(available && planned);
+      if (targetKey !== formKey) {
+        field.min = spots[activeSpot].min[id];
+        field.max = spots[activeSpot].max[id];
+        field.value = plant.target[id];
+        field.title = field.min + "–" + field.max + " mm";
+      }
+    });
+    targetKey = formKey;
+  }
+
+  function tabCount(id, count, unit) {
+    const badge = $(id + "-count");
+    badge.hidden = count === 0;
+    badge.textContent = count;
+    const label = id === "garden" ? "Garden" : "Controls";
+    badge.parentElement.setAttribute("aria-label", count ? label + ", " + count + " " + unit + (count === 1 ? "" : "s") : label);
+  }
+
+  function renderConditions(online) {
+    const readings = status?.bed_readings || {};
+    const simulated = status?.mode === "simulated";
+    const dry = Object.values(status?.garden?.spots || {}).filter(plant => plant.needs_water).length;
+    const hot = status?.garden?.notices?.includes("high_temperature");
+    let hasReading = false;
+    for (const row of conditionRows) {
+      const {reading: field, unit, low, high} = row.dataset;
+      const value = readings[field];
+      const measured = Number.isFinite(value);
+      hasReading ||= measured;
+      row.querySelector(".reading-value").textContent = measured ? value.toLocaleString() + unit : "No reading";
+      let label = "Unknown", state = "unknown", reason = "No current rating";
+      if (!online && status) {
+        label = "Offline";
+        reason = "Waiting for fresh readings";
+      } else if (online && field === "soil_moisture_pct" && dry) {
+        state = "warning";
+        label = dry === 1 ? "1 dry spot" : dry + " dry spots";
+        reason = "Open the plant alert to see which spot needs water";
+      } else if (online && field === "temperature_c" && hot) {
+        state = "warning";
+        label = "High";
+        reason = "The high-temperature demo is active";
+      } else if (online && simulated && measured) {
+        const inRange = value >= Number(low) && value <= Number(high);
+        state = inRange ? "good" : "warning";
+        label = inRange ? "Good" : value < Number(low) ? "Low" : "High";
+        reason = "Demo range " + low + "–" + high + unit;
+      }
+      const badge = row.querySelector(".reading-status");
+      badge.dataset.state = state;
+      badge.title = reason;
+      badge.querySelector("i").textContent = {good: "✓", warning: "⚠", unknown: "—"}[state];
+      badge.querySelector("span").textContent = label;
+    }
+    $("reading-source").hidden = !simulated || !hasReading;
+  }
+
+  function renderAlerts(online, tasks) {
+    const items = [];
+    const notices = status?.garden?.notices || [];
+    const bench = status?.paired_x;
+    if (fresh() && trajectoryPhases.includes(status?.paired_x?.phase)) {
+      items.push(["info", "Supervised X test", "Waiting for the STM32 to report measured travel and driver status."]);
+    } else if (fresh() && status?.commands_enabled === false && !status.hardware_connected) {
+      items.push(["warning", "Controller offline", status.error || "Waiting for a new serial reply."]);
+    } else if (!online) {
+      const lastSeen = receivedAt ? "Last update at " + new Date(receivedAt).toLocaleTimeString() + "." : "Waiting for the first update.";
+      items.push(["warning", receivedAt ? "Connection lost" : "Waiting for connection", lastSeen]);
+    }
+    if (status?.emergency_stop) items.push(["critical", "Stop active", "Clear stop to allow new commands."]);
+    const result = bench?.result;
+    const reviewX = bench?.phase === "finished" && result && !result.verified;
+    if (bench?.phase === "unknown") items.push(["warning", "X test result pending", bench.detail]);
+    if (reviewX) {
+      const title = result.run === "STOPPED" ? "X test stopped" : "Check X test result";
+      const detail = result.run === "DONE" ? "The encoder or driver evidence fell outside the expected range." :
+        "Controller reported " + result.run + " after " + result.steps + " pulses.";
+      items.push([result.run === "STOPPED" ? "info" : "warning", title, detail]);
+    }
+    const faulted = Object.keys(status?.alm || {}).filter(motor => status.alm[motor]);
+    for (const motor of faulted) {
+      items.push(["critical", (motorNames[motor] || motor) + " alarm", "ALM " + motor + " · All axes are stopped."]);
+    }
+    if (notices.includes("high_temperature")) items.push(["warning", "Bed temperature is high", "Garden bed · demo reading"]);
+    for (const task of tasks) {
+      items.push([task.tone, task.title, "Spot " + task.spot, task.spot]);
+    }
+    const key = JSON.stringify(items);
+    if (key === alertKey) return;
+    alertKey = key;
+    tabCount("controls", faulted.length + (reviewX && result.run !== "STOPPED" ? 1 : 0), "item to check");
+    tabCount("garden", tasks.length, "plant task");
+    $("alert-count").textContent = items.length;
+    $("jump-alerts").hidden = !items.length;
+    $("jump-alerts").textContent = items.length + (items.length === 1 ? " alert" : " alerts");
+    if (!items.length && status?.commands_enabled === false && status.alm_critical == null)
+      items.push(["info", "Alarm state unavailable", "The current status report does not include motor alarms."]);
+    else if (!items.length) items.push(["info", "All clear", "No active alerts."]);
+    const nodes = items.map(([tone, title, detail, spot]) => {
+      const node = document.createElement("div");
+      node.className = "alert-item " + tone;
+      const label = document.createElement("b");
+      label.textContent = title;
+      const text = document.createElement("small");
+      text.textContent = detail;
+      node.append(label, text);
+      if (spot) {
+        const link = document.createElement("a");
+        link.href = "#garden/" + spot;
+        link.className = "alert-spot";
+        link.textContent = "View spot " + spot + " →";
+        link.addEventListener("click", event => {
+          event.preventDefault();
+          pickedCrop = null;
+          updateSelection();
+          chooseSpot(spot, null);
+          location.hash = "garden/" + spot;
+          navigate();
+          $("placement-title").focus();
+        });
+        node.append(link);
+      }
+      return node;
+    });
+    $("alert-list").replaceChildren(...nodes);
+  }
+
+  function renderBench(online) {
+    const bench = status?.paired_x;
+    $("paired-panel").hidden = !bench;
+    if (!bench) return;
+    const active = activePhases.includes(bench.phase);
+    $("paired-arm").disabled = benchPending || !online || !bench.supported || bench.phase !== "idle" ||
+      status.scan_pending || status.encoder_x1 == null || !status.enables?.every(v => v === 0);
+    $("paired-move").disabled = benchPending || !online || bench.phase !== "armed" || !armToken;
+    $("paired-stop").disabled = !socket.connected || !active;
+    $("paired-state").textContent = bench.detail;
+    const r = bench.result;
+    $("paired-result").textContent = r ? r.run + " · " + r.steps + " pulses · X1 encoder " +
+      (r.encoder ?? "unavailable") + " · Index " + (r.index ?? "unavailable") : "";
+    $("paired-details").hidden = !r;
+    if (r) $("paired-drivers").replaceChildren(...Object.entries(r.drivers).map(([name, d]) => {
+      const row = document.createElement("p");
+      row.textContent = name + " · " + (d.configured ? "Configuration verified" : "Configuration incomplete") +
+        " · CTRL1 " + d.ctrl1 + " · FAULT " + d.fault + " · DIAG2 " + d.diag2 + " · " + d.samples +
+        " samples · Last register " + d.reg + " · HAL " + d.hal + " · Raw reply " + d.raw;
+      return row;
+    }));
+  }
+
+  function renderController(online) {
+    const physical = status?.commands_enabled === false;
+    $("controller-panel").hidden = !physical;
+    if (!physical) return;
+    const stm = status.mode === "stm32";
+    const label = stm ? "STM32" : "Arduino";
+    const time = status.sample_time ? new Date(status.sample_time).toLocaleTimeString() : null;
+    const qualifier = trajectoryPhases.includes(status.paired_x?.phase) ? " · Last idle sample" : online ? "" : " · Last known";
+    $("controller-sample").textContent = time
+      ? label + " reply #" + status.sample_number + " at " + time + qualifier
+      : "Waiting for the first " + label + " reply.";
+    const values = [];
+    if (stm && time) {
+      values.push("X1 encoder: " + (status.encoder_x1 ?? "Unavailable") + " counts",
+                  "MCU enables X/Y/Z: " + status.enables.join("/"), "Uptime: " + status.uptime_ms + " ms");
+    } else if (time) {
+      for (const [axis, value] of Object.entries(status.axes)) values.push(axis.toUpperCase() + ": " + value.steps + " steps");
+    }
+    $("controller-values").textContent = values.join(" · ");
+    $("scan-drivers").hidden = $("scan-hint").hidden = !stm;
+    $("scan-drivers").disabled = !online || status.scan_pending || activePhases.includes(status.paired_x?.phase) ||
+      !status.enables?.every(value => value === 0);
+    const scan = status.scan;
+    const report = [];
+    if (status.scan_pending) report.push("Checking driver SPI…");
+    if (scan) {
+      report.push("Last scan at " + new Date(scan.time).toLocaleTimeString());
+      if (scan.error) report.push(scan.error);
+      for (const [driver, row] of Object.entries(scan.drivers || {})) {
+        report.push(driver + " · SPI " + row.spi + (row.first ? " · FAULT " + row.first + "/" + row.settled +
+          " · status " + row.status_bits + " · CTRL1/2 " + row.ctrl1 + "/" + row.ctrl2 : "") +
+          (row.pins ? " · nFAULT " + row.pins : ""));
+      }
+    }
+    $("driver-report").replaceChildren(...report.map(line => {
+      const p = document.createElement("p"); p.textContent = line; return p;
+    }));
+  }
+
+  function render() {
+    const serverOnline = fresh();
+    const physical = status?.commands_enabled === false;
+    const online = serverOnline && (!physical || status.hardware_connected);
+    const canMove = online && !physical && !status.emergency_stop && !status.alm_critical;
+    const placing = Boolean(status?.garden?.active);
+    $("conn-text").textContent = online ? "Connected" : serverOnline && physical ? "Controller offline" : receivedAt ? "Offline" : "Connecting…";
+    $("conn-text").classList.toggle("connected", online);
+    if (status) $("mode-badge").textContent = {simulated: "Simulation", stm32: "STM32", arduino: "Arduino"}[status.mode] || status.mode;
+    const inBench = activePhases.includes(status?.paired_x?.phase);
+    const inTrajectory = trajectoryPhases.includes(status?.paired_x?.phase);
+    if (serverOnline && inTrajectory) $("conn-text").textContent = "X test in progress";
+    $("btn-estop").disabled = !status || (physical && !inBench) || !socket.connected || (online && status.emergency_stop);
+    $("btn-resume").disabled = physical || !online || !status.emergency_stop;
+    $("btn-home-all").disabled = !canMove || placing || axes.some(id => status.axes[id].homing);
+    homeButtons.forEach(b => { b.disabled = !canMove || placing || status.axes[b.dataset.home].homing; });
+    arrows.forEach(b => { b.disabled = !canMove || placing || !status.axes[b.dataset.axis].homed; });
+    if (status) {
+      for (const id of axes) {
+        const axis = status.axes[id];
+        $("position-" + id).textContent = !online && physical ? "Offline" : axis?.homed ? axis.percent + "%" :
+          physical ? "Unreferenced" : axis?.homing ? "Homing…" : "Home needed";
+        $("bar-" + id).style.width = (axis?.homed ? axis.percent : 0) + "%";
+      }
+      const along = cfg.bed_map.length, across = cfg.bed_map.width;
+      const pct = id => physical ? status.axes[id].percent : Math.max(0, Math.min(100, 100 * status.axes[id].steps / cfg.axes[id].max_steps));
+      $("mini-gantry").hidden = !status.axes[along]?.homed || !status.axes[across]?.homed || (physical && !online);
+      if (!$("mini-gantry").hidden) {
+        $("mini-gantry").style.left = pct(along) + "%";
+        $("mini-tool").style.top = pct(across) + "%";
+      }
+      const unknownPose = physical && (!online || axes.some(id => !status.axes[id]?.homed));
+      $("scene-frame").classList.toggle("unmeasured-pose", unknownPose);
+      $("plan-status").textContent = unknownPose ? "Model preview · Position unavailable" : !online ? "Last known bed view" :
+        $("mini-gantry").hidden ? "Home X and Y to locate the tool" : "Bed overview";
+    } else $("mini-gantry").hidden = true;
+    const tasks = plantTasks(status?.garden?.spots);
+    renderBench(online);
+    renderController(online);
+    renderGarden(online, canMove, tasks);
+    renderAlerts(online, tasks);
+    renderConditions(online);
+  }
+
   function appendLog(line) {
-    const div = document.createElement("div");
-    div.className = "log-line";
-
-    // Classify by keyword. These match the wording the hardware layer emits.
-    if (/EMERGENCY|refused|Cannot/i.test(line)) {
-      div.classList.add("is-alert");
-    } else if (/Warning|clamped/i.test(line)) {
-      div.classList.add("is-warn");
-    } else if (/\[SIM\]/.test(line)) {
-      div.classList.add("is-sim");
-    }
-
-    div.textContent = line;
-    el.log.appendChild(div);
-
-    // Keep only the most recent lines.
-    while (el.log.childElementCount > 300) {
-      el.log.removeChild(el.log.firstChild);
-    }
-
-    // Follow the newest entry, the way a terminal does.
-    el.log.scrollTop = el.log.scrollHeight;
+    const row = document.createElement("div");
+    row.textContent = line;
+    $("log").append(row);
+    while ($("log").childElementCount > 160) $("log").firstElementChild.remove();
+    $("log").scrollTop = $("log").scrollHeight;
   }
-
-  /* ============================================================
-     CONNECTION STATUS
-
-     A disconnected page keeps showing the last state it received, which
-     would look identical to a stopped machine. The indicator is what
-     distinguishes "nothing is moving" from "we have lost contact".
-     ============================================================ */
-
-  socket.on("connect", function () {
-    el.connDot.className = "dot dot-on";
-    el.connText.textContent = "Connected";
+  socket.on("status_update", value => {
+    const wasFresh = fresh();
+    const signature = JSON.stringify(value);
+    status = value;
+    if (!activePhases.includes(value.paired_x?.phase)) armToken = null;
+    receivedAt = Date.now();
+    awaitingSnapshot = false;
+    if (wasFresh && signature === previousSnapshot) return;
+    previousSnapshot = signature;
+    window.farmbotStatus = status;
+    window.dispatchEvent(new CustomEvent("farmbot:status", {detail: status}));
+    render();
   });
-
-  socket.on("disconnect", function () {
-    el.connDot.className = "dot dot-off";
-    el.connText.textContent = "Disconnected";
-    appendLog("[web] Connection to AgriGantry server lost.");
+  socket.on("log", data => (data.lines || []).forEach(appendLog));
+  socket.on("connect", render);
+  socket.on("disconnect", () => {
+    armToken = null;
+    benchPending = false;
+    awaitingSnapshot = true;
+    render();
+    appendLog("Connection lost. Waiting for fresh machine state.");
   });
-
+  setInterval(() => { if (!fresh()) render(); }, 1000);
+  render();
+  socket.connect();
 })();

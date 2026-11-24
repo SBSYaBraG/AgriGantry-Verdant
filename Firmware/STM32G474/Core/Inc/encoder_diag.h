@@ -47,6 +47,8 @@ extern volatile uint8_t encoder_diag_led_state;
 
 void Encoder_Diagnostic_Init(void);
 void Encoder_Diagnostic_Service(void);
+/* Start TIM5 and index capture without using the standalone diagnostic LED. */
+void Encoder_Diagnostic_StartCounter(void);
 
 #ifdef __cplusplus
 }

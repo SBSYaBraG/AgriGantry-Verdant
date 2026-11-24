@@ -2,7 +2,7 @@
 /**
   ******************************************************************************
   * @file           : motor_test.c
- * @brief          : Default-safe U4 preparation and one-shot armed hold test.
+ * @brief          : U4 driver preparation and bounded bench motion profiles.
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -164,6 +164,7 @@ volatile uint32_t motor_test_one_rev_start_tick_ms;
 volatile uint32_t motor_test_one_rev_end_tick_ms;
 
 volatile uint8_t motor_test_encoder_ready_at_arm;
+volatile uint8_t motor_test_encoder_window_started;
 volatile uint32_t motor_test_encoder_raw_before_enable;
 volatile uint32_t motor_test_encoder_raw_start;
 volatile uint32_t motor_test_encoder_raw_after_accel;
@@ -187,6 +188,7 @@ static void Motor_Test_ClearSlowStepResults(void);
 static void Motor_Test_ClearOneRevolutionResults(void);
 static void Motor_Test_ForceSafeState(void);
 static HAL_StatusTypeDef Motor_Test_ConfigureDisabled(void);
+static HAL_StatusTypeDef WakeXDisabled(void);
 static HAL_StatusTypeDef DRV8461_ReadRegister(GPIO_TypeDef *cs_port,
                                                uint16_t cs_pin,
                                                uint8_t address,
@@ -198,9 +200,10 @@ static HAL_StatusTypeDef DRV8461_WriteRegister(GPIO_TypeDef *cs_port,
                                                 uint8_t value,
                                                 volatile uint16_t *raw_frame);
 static uint8_t DRV8461_FrameIsHealthy(uint16_t raw_frame);
-static HAL_StatusTypeDef Motor_Test_EnableU4Outputs(void);
+static bool DRV8461_FrameIsValid(uint16_t raw_frame);
+static MotorMoveResult Motor_Test_EnableU4Outputs(bool (*stop_requested)(void));
 static uint32_t Motor_Test_OneRevLowTimeMs(uint16_t pulse_index);
-static void Motor_Test_CaptureEncoderEnd(void);
+static void Motor_Test_DecodeEncoderEnd(bool completed);
 static uint8_t Motor_Test_EncoderCountIsWithinTolerance(int32_t count);
 static void Motor_Test_IndicateEncoderInconclusive(void);
 
@@ -352,7 +355,7 @@ HAL_StatusTypeDef Motor_Test_RunHoldingTorque(void)
     return HAL_ERROR;
   }
 
-  if (Motor_Test_EnableU4Outputs() != HAL_OK)
+  if (Motor_Test_EnableU4Outputs(NULL) != MOTOR_MOVE_DONE)
   {
     Motor_Test_ForceSafeState();
     return HAL_ERROR;
@@ -420,7 +423,7 @@ HAL_StatusTypeDef Motor_Test_RunSlowStep(void)
 
   HAL_GPIO_WritePin(DIR_X_GPIO_Port, DIR_X_Pin, GPIO_PIN_RESET);
   HAL_Delay(5U);
-  if (Motor_Test_EnableU4Outputs() != HAL_OK)
+  if (Motor_Test_EnableU4Outputs(NULL) != MOTOR_MOVE_DONE)
   {
     Motor_Test_ForceSafeState();
     return HAL_ERROR;
@@ -474,133 +477,241 @@ HAL_StatusTypeDef Motor_Test_RunSlowStep(void)
  */
 HAL_StatusTypeDef Motor_Test_RunOneRevolution(void)
 {
-  uint16_t pulse_count;
-  uint32_t low_time_ms;
+  return Motor_Test_RunSupervisedRevolution(NULL) == MOTOR_MOVE_DONE ? HAL_OK : HAL_ERROR;
+}
 
-  Motor_Test_ClearHoldResults();
-  Motor_Test_ClearOneRevolutionResults();
+static MotorMoveResult MotionGuard(bool (*stop_requested)(void))
+{
+  motor_test_one_rev_nfault_at_shutdown = HAL_GPIO_ReadPin(FAULT_X1_GPIO_Port, FAULT_X1_Pin);
+  if (motor_test_one_rev_nfault_at_shutdown == GPIO_PIN_RESET)
+    return MOTOR_MOVE_X1_NFAULT;
+  if (HAL_GPIO_ReadPin(FAULT_X2_GPIO_Port, FAULT_X2_Pin) == GPIO_PIN_RESET)
+    return MOTOR_MOVE_X2_NFAULT;
+  if (stop_requested != NULL && stop_requested())
+    return MOTOR_MOVE_STOPPED;
+  return MOTOR_MOVE_DONE;
+}
 
+static MotorMoveResult ReadMotionDiagnostics(void)
+{
+  motor_test_one_rev_fault_read_status =
+      DRV8461_ReadRegister(CS_X1_GPIO_Port, CS_X1_Pin, DRV8461_REG_FAULT,
+                           &motor_test_one_rev_fault_raw_frame, &motor_test_one_rev_fault);
+  motor_test_one_rev_diag2_read_status =
+      DRV8461_ReadRegister(CS_X1_GPIO_Port, CS_X1_Pin, DRV8461_REG_DIAG2,
+                           &motor_test_one_rev_diag2_raw_frame, &motor_test_one_rev_diag2);
+  ++motor_test_one_rev_diagnostic_sample_count;
+  if (motor_test_one_rev_fault_read_status != HAL_OK || motor_test_one_rev_diag2_read_status != HAL_OK ||
+      !DRV8461_FrameIsValid(motor_test_one_rev_fault_raw_frame) ||
+      !DRV8461_FrameIsValid(motor_test_one_rev_diag2_raw_frame))
+    return MOTOR_MOVE_SPI_ERROR;
+
+  motor_test_one_rev_otw_seen |= (motor_test_one_rev_diag2 & DRV8461_DIAG2_OTW_MASK) != 0U;
+  motor_test_one_rev_ots_seen |= (motor_test_one_rev_diag2 & DRV8461_DIAG2_OTS_MASK) != 0U;
+  if (motor_test_one_rev_otw_seen || motor_test_one_rev_ots_seen)
+    return MOTOR_MOVE_THERMAL;
+  if (motor_test_one_rev_fault != 0U || !DRV8461_FrameIsHealthy(motor_test_one_rev_fault_raw_frame) ||
+      !DRV8461_FrameIsHealthy(motor_test_one_rev_diag2_raw_frame))
+    return MOTOR_MOVE_DRIVER_FAULT;
+  return MOTOR_MOVE_DONE;
+}
+
+/* Both chips are on GPIOE and share STEP, DIR, nSLEEP and the U9 enable gate. */
+static const uint16_t x_chip_select[] = {CS_X1_Pin, CS_X2_Pin};
+MotorXDriverReport motor_pair_driver[2];
+
+static bool PairRead(unsigned chip, uint8_t reg, uint8_t *value)
+{
+  MotorXDriverReport *d = &motor_pair_driver[chip];
+  d->last_reg = reg;
+  d->last_hal = DRV8461_ReadRegister(GPIOE, x_chip_select[chip], reg, &d->last_frame, value);
+  return d->last_hal == HAL_OK && DRV8461_FrameIsHealthy(d->last_frame);
+}
+
+static bool PairWriteVerify(unsigned chip, uint8_t reg, uint8_t value)
+{
+  MotorXDriverReport *d = &motor_pair_driver[chip];
+  d->last_reg = reg;
+  d->last_hal = DRV8461_WriteRegister(GPIOE, x_chip_select[chip], reg, value, &d->last_frame);
+  if (d->last_hal != HAL_OK || !DRV8461_FrameIsHealthy(d->last_frame))
+    return false;
+  uint8_t readback;
+  bool healthy = PairRead(chip, reg, &readback);
+  if (reg == DRV8461_REG_CTRL1 && healthy)
+    d->ctrl1 = readback;
+  return healthy && readback == value;
+}
+
+static MotorMoveResult PairDiagnostics(bool (*stop_requested)(void))
+{
+  for (unsigned chip = 0; chip < 2U; ++chip)
+  {
+    MotorMoveResult guard = MotionGuard(stop_requested);
+    if (guard != MOTOR_MOVE_DONE) return guard;
+    MotorXDriverReport *d = &motor_pair_driver[chip];
+    uint8_t fault, diag2;
+    bool healthy = PairRead(chip, DRV8461_REG_FAULT, &fault);
+    d->fault_frame = d->last_frame;
+    if (d->last_hal != HAL_OK || !DRV8461_FrameIsValid(d->last_frame))
+      return MOTOR_MOVE_SPI_ERROR;
+    bool diag_healthy = PairRead(chip, DRV8461_REG_DIAG2, &diag2);
+    d->diag2_frame = d->last_frame;
+    if (d->last_hal != HAL_OK || !DRV8461_FrameIsValid(d->last_frame))
+      return MOTOR_MOVE_SPI_ERROR;
+    ++d->samples;
+    if ((diag2 & (DRV8461_DIAG2_OTW_MASK | DRV8461_DIAG2_OTS_MASK)) != 0U)
+      return MOTOR_MOVE_THERMAL;
+    if (!healthy || !diag_healthy || fault != 0U || (diag2 & 0x03U) != 0U)
+      return MOTOR_MOVE_DRIVER_FAULT; /* DIAG2 bits 1:0 are OL_B and OL_A. */
+  }
+  return MOTOR_MOVE_DONE;
+}
+
+static MotorMoveResult ConfigurePair(bool (*stop_requested)(void))
+{
+  if (WakeXDisabled() != HAL_OK) return MOTOR_MOVE_PREPARATION_FAILED;
+  MotorMoveResult result = PairDiagnostics(stop_requested);
+  if (result != MOTOR_MOVE_DONE) return result;
+  for (unsigned chip = 0; chip < 2U; ++chip)
+  {
+    uint8_t value;
+    if (!PairRead(chip, DRV8461_REG_CTRL1, &value) || value != DRV8461_CTRL1_DISABLED ||
+        !PairWriteVerify(chip, DRV8461_REG_CTRL1, DRV8461_CTRL1_DISABLED) ||
+        !PairWriteVerify(chip, DRV8461_REG_CTRL13, DRV8461_CTRL13_INTERNAL_VREF) ||
+        !PairWriteVerify(chip, DRV8461_REG_CTRL11, DRV8461_CTRL11_030A_TRQ_DAC) ||
+        !PairRead(chip, DRV8461_REG_CTRL2, &value) || value != DRV8461_CTRL2_RESET_VALUE)
+      return MOTOR_MOVE_PREPARATION_FAILED;
+    motor_pair_driver[chip].configured = 1U;
+  }
+  return MotionGuard(stop_requested);
+}
+
+static MotorMoveResult EnablePair(bool (*stop_requested)(void))
+{
+  /* U9 is held off through both EN_OUT writes and independent readbacks. */
+  for (unsigned chip = 0; chip < 2U; ++chip)
+  {
+    MotorMoveResult result = MotionGuard(stop_requested);
+    if (result != MOTOR_MOVE_DONE) return result;
+    if (!PairWriteVerify(chip, DRV8461_REG_CTRL1, DRV8461_CTRL1_ENABLE_OUTPUTS))
+      return MOTOR_MOVE_ENABLE_FAILED;
+  }
+  MotorMoveResult result = MotionGuard(stop_requested);
+  if (result != MOTOR_MOVE_DONE) return result;
+  HAL_GPIO_WritePin(ENA_X_MCU_GPIO_Port, ENA_X_MCU_Pin, GPIO_PIN_SET);
+  return MotionGuard(stop_requested);
+}
+
+static MotorMoveResult RunTrajectory(bool paired, bool (*stop_requested)(void))
+{
   motor_test_encoder_ready_at_arm =
-      ((encoder_diag_initialized != 0U) && (encoder_diag_timer_start_status == HAL_OK)) ? 1U : 0U;
-  if (motor_test_encoder_ready_at_arm == 0U)
-  {
-    Motor_Test_ForceSafeState();
-    return HAL_ERROR;
-  }
-
-  if (Motor_Test_ConfigureDisabled() != HAL_OK)
-  {
-    Motor_Test_ForceSafeState();
-    return HAL_ERROR;
-  }
+      (encoder_diag_initialized != 0U && encoder_diag_timer_start_status == HAL_OK);
+  if (!motor_test_encoder_ready_at_arm)
+    return MOTOR_MOVE_ENCODER_UNAVAILABLE;
+  if (stop_requested != NULL && stop_requested())
+    return MOTOR_MOVE_STOPPED;
+  MotorMoveResult result = MOTOR_MOVE_DONE;
+  if (paired)
+    result = ConfigurePair(stop_requested);
+  else if (Motor_Test_ConfigureDisabled() != HAL_OK)
+    result = MOTOR_MOVE_PREPARATION_FAILED;
+  if (result != MOTOR_MOVE_DONE) return result;
 
   HAL_GPIO_WritePin(DIR_X_GPIO_Port, DIR_X_Pin, GPIO_PIN_RESET);
   HAL_Delay(5U);
+  result = paired ? PairDiagnostics(stop_requested) : ReadMotionDiagnostics();
+  if (result != MOTOR_MOVE_DONE)
+    return result;
+  result = MotionGuard(stop_requested);
+  if (result != MOTOR_MOVE_DONE)
+    return result;
   motor_test_encoder_raw_before_enable = __HAL_TIM_GET_COUNTER(&htim5);
-  if (Motor_Test_EnableU4Outputs() != HAL_OK)
-  {
-    Motor_Test_ForceSafeState();
-    return HAL_ERROR;
-  }
+  result = paired ? EnablePair(stop_requested) : Motor_Test_EnableU4Outputs(stop_requested);
+  if (result != MOTOR_MOVE_DONE)
+    return result;
 
-  /* Exclude the known output-enable alignment twitch from commanded motion. */
-  HAL_Delay(MOTOR_TEST_ENCODER_SETTLE_MS);
-  if (HAL_GPIO_ReadPin(FAULT_X1_GPIO_Port, FAULT_X1_Pin) == GPIO_PIN_RESET)
+  /* Keep sampling during alignment. Exclude it from the commanded distance. */
+  uint32_t enabled_at = HAL_GetTick();
+  do
   {
-    motor_test_one_rev_nfault_at_shutdown = GPIO_PIN_RESET;
-    Motor_Test_ForceSafeState();
-    return HAL_ERROR;
-  }
+    result = MotionGuard(stop_requested);
+    if (result != MOTOR_MOVE_DONE)
+      return result;
+    HAL_Delay(1U);
+  } while ((uint32_t)(HAL_GetTick() - enabled_at) < MOTOR_TEST_ENCODER_SETTLE_MS);
 
   motor_test_one_rev_start_tick_ms = HAL_GetTick();
   motor_test_encoder_raw_start = __HAL_TIM_GET_COUNTER(&htim5);
   motor_test_encoder_index_start = encoder_diag_index_event_count;
+  motor_test_encoder_window_started = 1U;
   HAL_GPIO_WritePin(STATUS_RUN_GPIO_Port, STATUS_RUN_Pin, GPIO_PIN_SET);
 
-  for (pulse_count = 0U; pulse_count < MOTOR_TEST_ONE_REV_MICROSTEPS; ++pulse_count)
+  for (uint16_t pulse = 0; pulse < MOTOR_TEST_ONE_REV_MICROSTEPS; ++pulse)
   {
-    if (HAL_GPIO_ReadPin(FAULT_X1_GPIO_Port, FAULT_X1_Pin) == GPIO_PIN_RESET)
-    {
-      motor_test_one_rev_nfault_at_shutdown = GPIO_PIN_RESET;
-      Motor_Test_ForceSafeState();
-      motor_test_one_rev_end_tick_ms = HAL_GetTick();
-      return HAL_ERROR;
-    }
-
+    result = MotionGuard(stop_requested);
+    if (result != MOTOR_MOVE_DONE)
+      return result;
     HAL_GPIO_WritePin(STEP_X_GPIO_Port, STEP_X_Pin, GPIO_PIN_SET);
+    ++motor_test_one_rev_pulses_issued; /* Count the actual rising edge even on abort. */
     HAL_Delay(MOTOR_TEST_ONE_REV_HIGH_MS);
-    if (HAL_GPIO_ReadPin(FAULT_X1_GPIO_Port, FAULT_X1_Pin) == GPIO_PIN_RESET)
-    {
-      motor_test_one_rev_nfault_at_shutdown = GPIO_PIN_RESET;
-      Motor_Test_ForceSafeState();
-      motor_test_one_rev_end_tick_ms = HAL_GetTick();
-      return HAL_ERROR;
-    }
-
     HAL_GPIO_WritePin(STEP_X_GPIO_Port, STEP_X_Pin, GPIO_PIN_RESET);
-    low_time_ms = Motor_Test_OneRevLowTimeMs(pulse_count);
-    HAL_Delay(low_time_ms);
-    motor_test_one_rev_pulses_issued++;
+    result = MotionGuard(stop_requested);
+    if (result != MOTOR_MOVE_DONE)
+      return result;
+    HAL_Delay(Motor_Test_OneRevLowTimeMs(pulse));
 
     if (motor_test_one_rev_pulses_issued == MOTOR_TEST_ONE_REV_ACCEL_STEPS)
     {
       motor_test_encoder_raw_after_accel = __HAL_TIM_GET_COUNTER(&htim5);
       motor_test_encoder_accel_end_tick_ms = HAL_GetTick();
     }
-    else if (motor_test_one_rev_pulses_issued ==
-             (MOTOR_TEST_ONE_REV_ACCEL_STEPS + MOTOR_TEST_ONE_REV_CRUISE_STEPS))
+    else if (motor_test_one_rev_pulses_issued == MOTOR_TEST_ONE_REV_ACCEL_STEPS + MOTOR_TEST_ONE_REV_CRUISE_STEPS)
     {
       motor_test_encoder_raw_after_cruise = __HAL_TIM_GET_COUNTER(&htim5);
       motor_test_encoder_cruise_end_tick_ms = HAL_GetTick();
     }
-
-    if (((motor_test_one_rev_pulses_issued % MOTOR_TEST_ONE_REV_DIAG_INTERVAL) == 0U) ||
-        (motor_test_one_rev_pulses_issued == MOTOR_TEST_ONE_REV_MICROSTEPS))
+    if (motor_test_one_rev_pulses_issued % MOTOR_TEST_ONE_REV_DIAG_INTERVAL == 0U)
     {
-      motor_test_one_rev_fault_read_status =
-          DRV8461_ReadRegister(CS_X1_GPIO_Port, CS_X1_Pin, DRV8461_REG_FAULT,
-                               &motor_test_one_rev_fault_raw_frame,
-                               &motor_test_one_rev_fault);
-      motor_test_one_rev_diag2_read_status =
-          DRV8461_ReadRegister(CS_X1_GPIO_Port, CS_X1_Pin, DRV8461_REG_DIAG2,
-                               &motor_test_one_rev_diag2_raw_frame,
-                               &motor_test_one_rev_diag2);
-      motor_test_one_rev_diagnostic_sample_count++;
-      motor_test_one_rev_otw_seen |=
-          ((motor_test_one_rev_diag2 & DRV8461_DIAG2_OTW_MASK) != 0U) ? 1U : 0U;
-      motor_test_one_rev_ots_seen |=
-          ((motor_test_one_rev_diag2 & DRV8461_DIAG2_OTS_MASK) != 0U) ? 1U : 0U;
-
-      if ((motor_test_one_rev_fault_read_status != HAL_OK) ||
-          (motor_test_one_rev_diag2_read_status != HAL_OK) ||
-          (DRV8461_FrameIsHealthy(motor_test_one_rev_fault_raw_frame) == 0U) ||
-          (DRV8461_FrameIsHealthy(motor_test_one_rev_diag2_raw_frame) == 0U) ||
-          (motor_test_one_rev_fault != 0U) ||
-          (motor_test_one_rev_otw_seen != 0U) ||
-          (motor_test_one_rev_ots_seen != 0U))
-      {
-        motor_test_one_rev_nfault_at_shutdown =
-            HAL_GPIO_ReadPin(FAULT_X1_GPIO_Port, FAULT_X1_Pin);
-        Motor_Test_ForceSafeState();
-        motor_test_one_rev_end_tick_ms = HAL_GetTick();
-        return HAL_ERROR;
-      }
+      result = MotionGuard(stop_requested);
+      if (result != MOTOR_MOVE_DONE)
+        return result;
+      result = paired ? PairDiagnostics(stop_requested) : ReadMotionDiagnostics();
+      if (result != MOTOR_MOVE_DONE)
+        return result;
     }
   }
+  return MotionGuard(stop_requested);
+}
 
-  motor_test_one_rev_nfault_at_shutdown =
-      HAL_GPIO_ReadPin(FAULT_X1_GPIO_Port, FAULT_X1_Pin);
-  if (motor_test_one_rev_nfault_at_shutdown == GPIO_PIN_RESET)
+static MotorMoveResult RunSupervisedRevolution(bool paired, bool (*stop_requested)(void))
+{
+  Motor_Test_ClearHoldResults();
+  Motor_Test_ClearOneRevolutionResults();
+  MotorMoveResult result = RunTrajectory(paired, stop_requested);
+  if (motor_test_encoder_window_started)
   {
-    Motor_Test_ForceSafeState();
-    motor_test_one_rev_end_tick_ms = HAL_GetTick();
-    return HAL_ERROR;
+    /* Take the two end readings before releasing holding torque. */
+    motor_test_encoder_raw_end = __HAL_TIM_GET_COUNTER(&htim5);
+    motor_test_encoder_index_end = encoder_diag_index_event_count;
   }
-
-  Motor_Test_CaptureEncoderEnd();
   Motor_Test_ForceSafeState();
   motor_test_one_rev_end_tick_ms = HAL_GetTick();
-  return HAL_OK;
+  motor_test_one_rev_status = (result == MOTOR_MOVE_DONE) ? HAL_OK : HAL_ERROR;
+  if (motor_test_encoder_window_started)
+    Motor_Test_DecodeEncoderEnd(result == MOTOR_MOVE_DONE);
+  return result;
+}
+
+MotorMoveResult Motor_Test_RunSupervisedRevolution(bool (*stop_requested)(void))
+{
+  return RunSupervisedRevolution(false, stop_requested);
+}
+
+MotorMoveResult Motor_Test_RunPairedRevolution(bool (*stop_requested)(void))
+{
+  for (unsigned chip = 0; chip < 2U; ++chip)
+    motor_pair_driver[chip] = (MotorXDriverReport){0};
+  return RunSupervisedRevolution(true, stop_requested);
 }
 
 static void Motor_Test_ClearResults(void)
@@ -697,6 +808,7 @@ static void Motor_Test_ClearOneRevolutionResults(void)
   motor_test_one_rev_end_tick_ms = 0U;
 
   motor_test_encoder_ready_at_arm = 0U;
+  motor_test_encoder_window_started = 0U;
   motor_test_encoder_raw_before_enable = 0U;
   motor_test_encoder_raw_start = 0U;
   motor_test_encoder_raw_after_accel = 0U;
@@ -743,26 +855,27 @@ static uint32_t Motor_Test_OneRevLowTimeMs(uint16_t pulse_index)
 }
 
 /**
-  * @brief  Captures final A/B and index evidence without changing the encoder.
+  * @brief  Decode captured A/B and index evidence after disabling the drivers.
   */
-static void Motor_Test_CaptureEncoderEnd(void)
+static void Motor_Test_DecodeEncoderEnd(bool completed)
 {
-  motor_test_encoder_raw_end = __HAL_TIM_GET_COUNTER(&htim5);
-  motor_test_encoder_index_end = encoder_diag_index_event_count;
-  motor_test_encoder_delta_accel =
-      (int32_t)(motor_test_encoder_raw_after_accel - motor_test_encoder_raw_start);
-  motor_test_encoder_delta_cruise =
-      (int32_t)(motor_test_encoder_raw_after_cruise - motor_test_encoder_raw_after_accel);
-  motor_test_encoder_delta_decel =
-      (int32_t)(motor_test_encoder_raw_end - motor_test_encoder_raw_after_cruise);
   motor_test_encoder_delta_total =
       (int32_t)(motor_test_encoder_raw_end - motor_test_encoder_raw_start);
   motor_test_encoder_index_delta =
       motor_test_encoder_index_end - motor_test_encoder_index_start;
   motor_test_encoder_index_seen =
       (motor_test_encoder_index_delta != 0U) ? 1U : 0U;
-  motor_test_encoder_count_within_tolerance =
-      Motor_Test_EncoderCountIsWithinTolerance(motor_test_encoder_delta_total);
+  if (completed)
+  {
+    motor_test_encoder_delta_accel =
+        (int32_t)(motor_test_encoder_raw_after_accel - motor_test_encoder_raw_start);
+    motor_test_encoder_delta_cruise =
+        (int32_t)(motor_test_encoder_raw_after_cruise - motor_test_encoder_raw_after_accel);
+    motor_test_encoder_delta_decel =
+        (int32_t)(motor_test_encoder_raw_end - motor_test_encoder_raw_after_cruise);
+    motor_test_encoder_count_within_tolerance =
+        Motor_Test_EncoderCountIsWithinTolerance(motor_test_encoder_delta_total);
+  }
 }
 
 static uint8_t Motor_Test_EncoderCountIsWithinTolerance(int32_t count)
@@ -773,7 +886,7 @@ static uint8_t Motor_Test_EncoderCountIsWithinTolerance(int32_t count)
            (count <= -(MOTOR_TEST_ENCODER_EXPECTED_COUNTS - MOTOR_TEST_ENCODER_TOLERANCE_COUNTS)))) ? 1U : 0U;
 }
 
-static HAL_StatusTypeDef Motor_Test_ConfigureDisabled(void)
+static HAL_StatusTypeDef WakeXDisabled(void)
 {
   Motor_Test_ClearResults();
   Motor_Test_ForceSafeState();
@@ -790,7 +903,12 @@ static HAL_StatusTypeDef Motor_Test_ConfigureDisabled(void)
   HAL_GPIO_WritePin(SLEEP_X_GPIO_Port, SLEEP_X_Pin, GPIO_PIN_SET);
   motor_test_wake_tick_ms = HAL_GetTick();
   HAL_Delay(MOTOR_TEST_AWAKE_SETTLE_MS);
+  return HAL_OK;
+}
 
+static HAL_StatusTypeDef Motor_Test_ConfigureDisabled(void)
+{
+  if (WakeXDisabled() != HAL_OK) return HAL_ERROR;
   motor_test_fault_sample_tick_ms = HAL_GetTick();
   motor_test_fault_x1_awake_level = HAL_GPIO_ReadPin(FAULT_X1_GPIO_Port, FAULT_X1_Pin);
   motor_test_fault_x1_awake_asserted =
@@ -967,24 +1085,23 @@ static HAL_StatusTypeDef DRV8461_WriteRegister(GPIO_TypeDef *cs_port,
   return transfer_status;
 }
 
-static uint8_t DRV8461_FrameIsHealthy(uint16_t raw_frame)
+static bool DRV8461_FrameIsValid(uint16_t raw_frame)
 {
   uint8_t status_byte = (uint8_t)(raw_frame >> 8U);
+  return raw_frame != 0x0000U && raw_frame != 0xFFFFU &&
+         (status_byte & DRV8461_STATUS_HEADER_MASK) == DRV8461_STATUS_HEADER_VALUE;
+}
 
-  if ((raw_frame == 0x0000U) || (raw_frame == 0xFFFFU) ||
-      ((status_byte & DRV8461_STATUS_HEADER_MASK) != DRV8461_STATUS_HEADER_VALUE) ||
-      ((status_byte & DRV8461_STATUS_FAULT_MASK) != 0U))
-  {
-    return 0U;
-  }
-  return 1U;
+static uint8_t DRV8461_FrameIsHealthy(uint16_t raw_frame)
+{
+  return DRV8461_FrameIsValid(raw_frame) &&
+         (((raw_frame >> 8U) & DRV8461_STATUS_FAULT_MASK) == 0U);
 }
 
 /**
- * @brief  Perform the final future-approved transition from disabled to U4 on.
- * @note   U5 EN_OUT was checked clear by Motor_Test_ConfigureDisabled().
+ * @brief  Recheck the shared X axis and enable only U4 for an accepted request.
  */
-static HAL_StatusTypeDef Motor_Test_EnableU4Outputs(void)
+static MotorMoveResult Motor_Test_EnableU4Outputs(bool (*stop_requested)(void))
 {
   /* Recheck U5 immediately before raising the shared external X enable. */
   motor_test_hold_u5_ctrl1_read_status =
@@ -995,48 +1112,51 @@ static HAL_StatusTypeDef Motor_Test_EnableU4Outputs(void)
       (DRV8461_FrameIsHealthy(motor_test_hold_u5_ctrl1_raw_frame) == 0U) ||
       ((motor_test_hold_u5_ctrl1_before_enable & DRV8461_CTRL1_EN_OUT_MASK) != 0U))
   {
-    return HAL_ERROR;
+    return MOTOR_MOVE_ENABLE_FAILED;
   }
 
   /* External MOTION_OK must be a logic HIGH for actual torque; the MCU cannot read it. */
+  MotorMoveResult result = MotionGuard(stop_requested);
+  if (result != MOTOR_MOVE_DONE)
+    return result;
   HAL_GPIO_WritePin(ENA_X_MCU_GPIO_Port, ENA_X_MCU_Pin, GPIO_PIN_SET);
   HAL_Delay(1U);
-  motor_test_hold_nfault_at_enable = HAL_GPIO_ReadPin(FAULT_X1_GPIO_Port, FAULT_X1_Pin);
-  if (motor_test_hold_nfault_at_enable == GPIO_PIN_RESET)
-  {
-    return HAL_ERROR;
-  }
+  result = MotionGuard(stop_requested);
+  motor_test_hold_nfault_at_enable = motor_test_one_rev_nfault_at_shutdown;
+  if (result != MOTOR_MOVE_DONE)
+    return result;
 
-  /* The one output-enabling write is reachable only after the SWD arm pair. */
+  /* The active application consumes its one-shot authorization before this write. */
   motor_test_hold_ctrl1_enable_write_status =
       DRV8461_WriteRegister(CS_X1_GPIO_Port, CS_X1_Pin, DRV8461_REG_CTRL1,
                             DRV8461_CTRL1_ENABLE_OUTPUTS,
                             &motor_test_hold_ctrl1_enable_write_raw_frame);
+  if (motor_test_hold_ctrl1_enable_write_status != HAL_OK ||
+      !DRV8461_FrameIsHealthy(motor_test_hold_ctrl1_enable_write_raw_frame))
+    return MOTOR_MOVE_ENABLE_FAILED;
   motor_test_hold_ctrl1_enable_read_status =
       DRV8461_ReadRegister(CS_X1_GPIO_Port, CS_X1_Pin, DRV8461_REG_CTRL1,
                            &motor_test_hold_ctrl1_enable_read_raw_frame,
                            &motor_test_hold_ctrl1_enabled_readback);
-  if ((motor_test_hold_ctrl1_enable_write_status != HAL_OK) ||
-      (motor_test_hold_ctrl1_enable_read_status != HAL_OK) ||
-      (DRV8461_FrameIsHealthy(motor_test_hold_ctrl1_enable_write_raw_frame) == 0U) ||
+  if ((motor_test_hold_ctrl1_enable_read_status != HAL_OK) ||
       (DRV8461_FrameIsHealthy(motor_test_hold_ctrl1_enable_read_raw_frame) == 0U) ||
       (motor_test_hold_ctrl1_enabled_readback != DRV8461_CTRL1_ENABLE_OUTPUTS))
   {
-    return HAL_ERROR;
+    return MOTOR_MOVE_ENABLE_FAILED;
   }
 
-  return HAL_OK;
+  return MOTOR_MOVE_DONE;
 }
 
 static void Motor_Test_ForceSafeState(void)
 {
+  HAL_GPIO_WritePin(ENA_X_MCU_GPIO_Port, ENA_X_MCU_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(ENA_Y_MCU_GPIO_Port, ENA_Y_MCU_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(ENA_Z_MCU_GPIO_Port, ENA_Z_MCU_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(DIR_X_GPIO_Port, DIR_X_Pin | STEP_X_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(CS_X1_GPIO_Port, CS_X1_Pin | CS_X2_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(CS_Y_GPIO_Port, CS_Y_Pin, GPIO_PIN_SET);
   HAL_GPIO_WritePin(CS_Z_GPIO_Port, CS_Z_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(ENA_X_MCU_GPIO_Port, ENA_X_MCU_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(ENA_Y_MCU_GPIO_Port, ENA_Y_MCU_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(ENA_Z_MCU_GPIO_Port, ENA_Z_MCU_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(SLEEP_X_GPIO_Port, SLEEP_X_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(SLEEP_Y_GPIO_Port, SLEEP_Y_Pin, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(SLEEP_Z_GPIO_Port, SLEEP_Z_Pin, GPIO_PIN_RESET);

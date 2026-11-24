@@ -92,6 +92,14 @@ class SimulatedHardware:
         # the developer fault-injection controls, so we can build and test the
         # alarm UI without needing a genuine motor fault.
         self._alm = {name: False for name in config.all_motor_names()}
+        self._spots = config.garden_spots()
+        self._garden = {
+            name: {"crop": None, "stage": "empty", "needs_water": False, "target": spot["target"].copy()}
+            for name, spot in self._spots.items()
+        }
+        self._planting_spot = None
+        self._garden_notices = set()
+        self._bed_readings = {}
 
         # Queue of human-readable event lines awaiting delivery to browsers.
         self._log_lines = []
@@ -144,19 +152,18 @@ class SimulatedHardware:
             elapsed = now - last_time
             last_time = now
 
-            with self._lock:
-                # While the emergency stop is latched nothing moves at all.
-                if self._estop:
-                    continue
+            self._tick(elapsed)
 
-                # Any driver ALM is a machine-wide motion interlock. The
-                # physical gantry must never continue another axis while one
-                # motor driver is reporting a fault.
-                if self._active_alm_motors():
-                    continue
-
-                for axis in self._axes.values():
-                    self._advance_axis(axis, elapsed)
+    def _tick(self, elapsed):
+        with self._lock:
+            if self._estop or any(self._alm.values()):
+                return
+            for axis in self._axes.values():
+                self._advance_axis(axis, elapsed)
+            if self._planting_spot and not any(axis.moving for axis in self._axes.values()):
+                self._garden[self._planting_spot]["stage"] = "growing"
+                self._log(f"[SIM] Reached {self._planting_spot}. Seed placement simulated.")
+                self._planting_spot = None
 
     def _advance_axis(self, axis, elapsed_seconds):
         """
@@ -275,15 +282,11 @@ class SimulatedHardware:
     # -------------------- HOMING --------------------
 
     def home_axis(self, axis_id):
-        """
-        Home a single axis by driving it back to position zero.
-
-        The real firmware seeks the limit switch, backs off BACKOFF_STEPS, then
-        zeroes the counter. We model the observable result - the axis travels
-        home and ends up zeroed - rather than the switch mechanics, which have
-        no visible effect in the interface.
-        """
+        """Reference one simulated axis against both limits, then return it to center."""
         with self._lock:
+            if self._planting_spot:
+                self._log("Homing refused while positioning a seed.")
+                return
             if self._estop:
                 self._log("Cannot home: emergency stop is active. Send RESUME first.")
                 return
@@ -301,6 +304,9 @@ class SimulatedHardware:
     def home_all(self):
         """Home every axis."""
         with self._lock:
+            if self._planting_spot:
+                self._log("Homing refused while positioning a seed.")
+                return
             if self._estop:
                 self._log("Cannot home: emergency stop is active. Send RESUME first.")
                 return
@@ -345,6 +351,7 @@ class SimulatedHardware:
         """
         with self._lock:
             self._estop = True
+            self._cancel_planting()
             for axis in self._axes.values():
                 axis.target = axis.position   # discard remaining travel
                 axis.home_phase = None        # a cancelled homing run did not succeed
@@ -398,6 +405,9 @@ class SimulatedHardware:
         Returns True if the move may proceed, otherwise logs why not and
         returns False.
         """
+        if self._planting_spot:
+            self._log("Move refused while positioning a seed.")
+            return False
         if self._estop:
             self._log("Command refused: emergency stop is active. Send RESUME first.")
             return False
@@ -450,6 +460,7 @@ class SimulatedHardware:
         with self._lock:
             if motor_name in self._alm:
                 self._alm[motor_name] = True
+                self._cancel_planting()
                 self._log(f"[SIM] ALM fault injected on motor {motor_name}")
 
                 # Match the physical safety behaviour: one asserted driver ALM
@@ -480,13 +491,95 @@ class SimulatedHardware:
                 self._alm[name] = False
             self._log("[SIM] All ALM faults cleared")
 
+    def _cancel_planting(self):
+        if self._planting_spot:
+            self._garden[self._planting_spot]["stage"] = "planned"
+            self._log(f"[SIM] Placement interrupted at {self._planting_spot}. Seed is still planned.")
+            self._planting_spot = None
+
+    def garden_preview(self, data):
+        """Apply one simulator action under the same lock as the motion loop."""
+        action = data.get("action")
+        with self._lock:
+            if action == "sample_conditions":
+                self._bed_readings = {"soil_moisture_pct": 42, "temperature_c": 23,
+                                      "soil_ph": 6.4, "humidity_pct": 58}
+                return None
+            if action == "high_temperature":
+                self._garden_notices.add(action)
+                return None
+            if action == "clear_alerts":
+                self._garden_notices.clear()
+                for plant in self._garden.values():
+                    plant["needs_water"] = False
+                self._alm.update(dict.fromkeys(self._alm, False))
+                self._log("[SIM] Demo alerts cleared.")
+                return None
+
+            zone = data.get("spot")
+            if not isinstance(zone, str) or zone not in self._garden:
+                return "Choose a planting spot."
+            plant = self._garden[zone]
+            crop = data.get("crop")
+            if action == "plan":
+                if plant["stage"] not in ("empty", "planned"):
+                    return "This spot is already in use."
+                if not isinstance(crop, str) or crop not in config.GARDEN_CROPS:
+                    return "Choose a seed from the library."
+                plant.update(crop=crop, stage="planned")
+                return None
+            if crop != plant["crop"]:
+                return "This spot changed. Check the current plan."
+            if action == "demo_plant" and plant["stage"] in ("empty", "planned"):
+                plant.update(crop=crop or "radish", stage="growing")
+                return None
+            if action in ("harvest_ready", "low_moisture", "mark_watered"):
+                if plant["stage"] not in ("growing", "ready"):
+                    return "Choose a growing or harvest-ready plant."
+                if action == "harvest_ready":
+                    plant["stage"] = "ready"
+                else:
+                    plant["needs_water"] = action == "low_moisture"
+                return None
+            if action == "remove" and plant["stage"] in ("planned", "ready"):
+                plant.update(crop=None, stage="empty", needs_water=False, target=self._spots[zone]["target"].copy())
+                return None
+            if action == "place" and plant["stage"] == "planned":
+                return self._place_seed(zone, data.get("target"))
+            return "That action is unavailable for this spot."
+
+    def _place_seed(self, zone, target):
+        """Validate the entire XYZ move before changing any target. Lock held."""
+        if self._estop or any(self._alm.values()):
+            return "Clear the stop or active motor alarm first."
+        if not all(axis.homed for axis in self._axes.values()):
+            return "Home X, Y and Z first."
+        if self._planting_spot or any(a.moving or a.homing for a in self._axes.values()):
+            return "Wait for the current move to finish."
+        limits = self._spots[zone]
+        if not isinstance(target, dict) or target.keys() != self._axes.keys():
+            return "Enter X, Y and Z in millimetres."
+        for axis, value in target.items():
+            if type(value) is not int or not limits["min"][axis] <= value <= limits["max"][axis]:
+                return f"{axis.upper()} is outside the range for {zone}."
+        for axis, value in target.items():
+            self._axes[axis].target = config.mm_to_steps(axis, value)
+        self._planting_spot = zone
+        self._garden[zone].update(stage="positioning", target=target.copy())
+        self._log(f"[SIM] Positioning for {config.GARDEN_CROPS[self._garden[zone]['crop']]} at {zone}.")
+        return None
+
     # -------------------- STATE REPORTING --------------------
 
     def get_status(self):
         """Snapshot of the whole machine, shaped for the browser."""
         with self._lock:
+            readings = self._bed_readings.copy()
+            if "high_temperature" in self._garden_notices:
+                readings["temperature_c"] = 36
             return {
                 "mode": self.mode,
+                "bed_readings": readings,
                 "emergency_stop": self._estop,
                 "axes": {
                     axis_id: {
@@ -494,12 +587,19 @@ class SimulatedHardware:
                         "mm": round(config.steps_to_mm(axis_id, axis.position), 1),
                         "percent": axis.percent,
                         "homed": axis.homed,
+                        "homing": axis.homing,
                         "moving": axis.moving,
                     }
                     for axis_id, axis in self._axes.items()
                 },
                 "alm": dict(self._alm),
                 "alm_critical": any(self._alm.values()),
+                "garden": {
+                    "spots": {name: {**plant, "target": plant["target"].copy()}
+                              for name, plant in self._garden.items()},
+                    "active": self._planting_spot,
+                    "notices": sorted(self._garden_notices),
+                },
             }
 
     def drain_log(self):

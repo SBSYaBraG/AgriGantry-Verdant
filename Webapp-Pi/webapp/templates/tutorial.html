@@ -1,0 +1,79 @@
+{% set topics = [
+  ('movement', 'Movement & machine view', 'Home the axes, jog and use the 3D camera.', [
+    ('axes', 'Start with Home', 'In Controls, choose Home all to reference X, Y and Z together, or Home X, Y or Z individually. The simulator finishes at 50% of travel. A jog arrow becomes available when its axis has a known position.'),
+    ('pad', 'Choose a distance per tap', 'Set 10, 25 or 50 mm. The X/Y pad moves across the bed. The Z arrows raise and lower the tool. Each tap starts from the current position. Read the percentages beside the pad to see where the axes ended up.'),
+    ('view', 'Look around the machine', 'Choose Show 3D. Drag to orbit and scroll or pinch to zoom. Select a face or a corner on the view cube for a preset angle. Reset view restores the opening shot. Hide 3D returns to the bed overview.')
+  ]),
+  ('planting', 'Planting & harvest', 'Plan a spot, place a seed and mark a crop ready.', [
+    ('plant', 'Plan a planting spot', 'In Garden, drag a seed onto one of the six spots, or select the seed and tap the spot. Planning reserves that spot. Open Target coordinates to adjust the destination in millimetres from home, or choose Remove plan to free it.'),
+    ('plant', 'Place the seed', 'Home all the axes, select the planned spot and click Place seed. The simulated gantry travels to it. Growing means it arrived. If a stop or motor alarm interrupts the trip, the seed goes back to Planned.'),
+    ('harvest', 'Mark a plant ready whenever you like', 'There is no growth timer in this demo. Select a Growing spot and click Mark ready to harvest. The Garden badge gains a task. Open its alert using View spot, then choose Mark harvested when you want to free that spot.')
+  ]),
+  ('conditions', 'Water & bed conditions', 'Read the condition symbols and handle a dry plant.', [
+    ('conditions', 'Read the four condition indicators', 'A check means the sample is inside the demo range. A warning triangle flags a high or low value, or a spot that needs water. A dash means there is no current rating. Show sample readings under Alerts → Show more fills the four rows.'),
+    ('water', 'Give one plant a watering task', 'Under Alerts → Show more, choose the plant and click Low moisture. The alert names its crop and spot. Click View spot, then Mark watered to finish that task. The Garden badge counts watering and harvest tasks separately.'),
+    ('conditions', 'Try the demos immediately', 'High temperature applies to the whole bed as soon as you click it. For plant alerts, choose a Growing spot. On an empty spot, Add demo radish supplies one. On a planned seed, Preview growing skips the placement trip for the demo.')
+  ]),
+  ('alarms', 'Stops, alarms & connection', 'Understand a stop and how to give a new command.', [
+    ('stop', 'Stop and clear', 'Stop cancels travel on every axis. Clear stop releases the stop so you can give a new command. An interrupted seed placement stays Planned. Choose Place seed again when you are ready.'),
+    ('alarm', 'Find the motor that raised an alarm', 'The Controls badge counts motors in alarm. Alerts names each one. In Show more, ALM XL, XR, Y or Z simulates a motor alarm and stops travel. Clear demo alerts clears injected alarms and warnings. Ready crops keep their harvest tasks.'),
+    ('link', 'Check the connection and activity', 'In STM32 or Arduino mode, Controller telemetry shows the time of the last serial reply. Controller offline means the Pi is serving the dashboard while the controller is unavailable. Check driver SPI reads all four STM32 drivers once while idle. X1 encoder counts can change before a referenced axis position is available.')
+  ])
+] %}
+
+{% macro illustration(art) %}
+  {% if art == 'axes' %}
+    <div class="guide-instrument guide-axes">{% for axis in cfg.axes %}<div><b>{{ axis|upper }}</b><i></i><span>50%</span></div>{% endfor %}</div>
+  {% elif art == 'pad' %}
+    <div class="guide-pad"><i></i><i></i><b>X / Y</b><i></i><i></i></div><span class="guide-distance">25 mm</span>
+  {% elif art == 'view' %}
+    <div class="guide-bed"><i></i><b></b></div>
+  {% elif art == 'plant' %}
+    <div class="guide-seed"><i class="crop-art crop-basil"></i><b>Basil</b></div><span class="guide-path">→</span><div class="guide-plot"><small>B2</small><i class="crop-art crop-basil"></i></div>
+  {% elif art in ('harvest', 'water') %}
+    <div class="guide-instrument guide-harvest"><i class="crop-art crop-radish"></i><div><small>Spot B2</small><b>Radish</b><span>{{ 'Ready to harvest' if art == 'harvest' else 'Needs water' }}</span></div></div>
+  {% elif art == 'conditions' %}
+    <div class="guide-instrument guide-condition-sample"><b>Air temperature</b><span>36 °C</span><span class="reading-status" data-state="warning"><i>⚠</i> High</span></div>
+  {% else %}
+    {% set text = {'alarm': ('!', 'Left X motor alarm', 'All axes stopped'), 'stop': ('■', 'Stop active', 'Clear stop to allow new commands'), 'link': ('●', 'Connected', 'Receiving position updates')}[art] %}
+    <div class="guide-instrument guide-alarm"><i>{{ text[0] }}</i><div><b>{{ text[1] }}</b><small>{{ text[2] }}</small></div></div>
+  {% endif %}
+{% endmacro %}
+
+<div class="work-pane" id="tutorial-page" hidden>
+  <section class="panel guide" aria-label="Dashboard tutorial">
+    <div class="panel-head guide-heading">
+      <h2 id="guide-title" tabindex="-1">Choose a topic</h2>
+      <a id="guide-close" class="quiet-btn" href="#controls">Close tutorial <span aria-hidden="true">×</span></a>
+    </div>
+    <div id="guide-index">
+      <p>Pick what you want to do. Each topic has its own short walkthrough.</p>
+      <div class="guide-topic-list">
+        {% for key, title, summary, lessons in topics %}
+        <a class="guide-topic" href="#tutorial/{{ key }}" data-topic-link="{{ key }}">
+          <span class="topic-icon icon-{{ key }}" aria-hidden="true">{% if key == 'planting' %}<i class="crop-art crop-basil"></i>{% elif key == 'movement' %}✥{% elif key == 'conditions' %}◒{% else %}⚠{% endif %}</span>
+          <span><strong>{{ title }}</strong><small>{{ summary }}</small></span><span class="topic-chevron" aria-hidden="true">›</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    <div id="guide-reader" hidden>
+      {% for key, title, summary, lessons in topics %}
+      <div data-guide-topic="{{ key }}" data-title="{{ title }}" hidden>
+        {% for art, heading, copy in lessons %}
+        <article class="guide-slide" hidden>
+          <div class="guide-art art-{{ art }}" aria-hidden="true">{{ illustration(art) }}</div>
+          <div class="guide-copy"><p class="guide-step">Slide {{ loop.index }} of {{ lessons|length }}</p>
+            <h3 tabindex="-1">{{ heading }}</h3><p>{{ copy }}</p></div>
+        </article>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <div class="guide-footer">
+        <a href="#tutorial" class="guide-topics-link">All topics</a>
+        <div class="actions"><button id="guide-prev" class="quiet-btn" type="button">Back</button>
+          <button id="guide-next" class="solid-btn" type="button">Next</button></div>
+      </div>
+    </div>
+  </section>
+</div>

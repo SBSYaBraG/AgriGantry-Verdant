@@ -84,6 +84,10 @@ void Error_Handler(void);
 #define MX1_ENC_Z_EXTI_IRQn EXTI2_IRQn
 #define ENA_Z_MCU_Pin GPIO_PIN_3
 #define ENA_Z_MCU_GPIO_Port GPIOA
+#define PI_UART_TX_Pin GPIO_PIN_4
+#define PI_UART_TX_GPIO_Port GPIOC
+#define PI_UART_RX_Pin GPIO_PIN_5
+#define PI_UART_RX_GPIO_Port GPIOC
 #define STATUS_RUN_Pin GPIO_PIN_12
 #define STATUS_RUN_GPIO_Port GPIOD
 #define SLEEP_Z_Pin GPIO_PIN_15

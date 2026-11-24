@@ -15,6 +15,5 @@ Flask-SocketIO>=5.3.0
 # less smooth and it generates far more network chatter.
 simple-websocket>=1.0.0
 
-# Needed later, by the serial-backed hardware backend that talks to the
-# Arduino. Listed now because the Pi will need it and it is a trivial install.
+# The STM32 COMM and Arduino USB profiles share the serial transport.
 pyserial>=3.5

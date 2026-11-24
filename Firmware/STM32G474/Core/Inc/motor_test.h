@@ -16,6 +16,7 @@ extern "C" {
 #endif
 
 #include "main.h"
+#include <stdbool.h>
 
 /* Preparation telemetry retained in SRAM for supervised inspection. */
 extern volatile HAL_StatusTypeDef motor_test_spi_init_status;
@@ -121,6 +122,7 @@ extern volatile uint32_t motor_test_one_rev_end_tick_ms;
 
 /* Test 10 encoder snapshots for the bounded acceleration/cruise/deceleration move. */
 extern volatile uint8_t motor_test_encoder_ready_at_arm;
+extern volatile uint8_t motor_test_encoder_window_started;
 extern volatile uint32_t motor_test_encoder_raw_before_enable;
 extern volatile uint32_t motor_test_encoder_raw_start;
 extern volatile uint32_t motor_test_encoder_raw_after_accel;
@@ -148,6 +150,32 @@ void Motor_Test_IndicateFailure(void);
 HAL_StatusTypeDef Motor_Test_RunHoldingTorque(void);
 HAL_StatusTypeDef Motor_Test_RunSlowStep(void);
 HAL_StatusTypeDef Motor_Test_RunOneRevolution(void);
+
+typedef enum {
+  MOTOR_MOVE_DONE,
+  MOTOR_MOVE_STOPPED,
+  MOTOR_MOVE_ENCODER_UNAVAILABLE,
+  MOTOR_MOVE_PREPARATION_FAILED,
+  MOTOR_MOVE_ENABLE_FAILED,
+  MOTOR_MOVE_X1_NFAULT,
+  MOTOR_MOVE_X2_NFAULT,
+  MOTOR_MOVE_SPI_ERROR,
+  MOTOR_MOVE_DRIVER_FAULT,
+  MOTOR_MOVE_THERMAL,
+  MOTOR_MOVE_LINK_LOST
+} MotorMoveResult;
+
+/* The caller admits a single operator-authorized attempt. All returns disable the drivers. */
+MotorMoveResult Motor_Test_RunSupervisedRevolution(bool (*stop_requested)(void));
+
+/* Retained per chip after one paired-X attempt. Raw frames include the SPI header. */
+typedef struct {
+  uint16_t fault_frame, diag2_frame, last_frame;
+  uint16_t samples;
+  uint8_t last_reg, last_hal, ctrl1, configured;
+} MotorXDriverReport;
+extern MotorXDriverReport motor_pair_driver[2]; /* U4/X1, U5/X2 */
+MotorMoveResult Motor_Test_RunPairedRevolution(bool (*stop_requested)(void));
 
 #ifdef __cplusplus
 }

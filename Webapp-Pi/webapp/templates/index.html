@@ -1,62 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <!-- user-scalable=no stops an accidental pinch-zoom while jabbing at
-       controls, which matters on a touchscreen in a greenhouse. -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>AgriGantry Control</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#153e32">
+  <title>AgriGantry · Garden control</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-
-  <!-- ============================================================
-       TOP BAR
-       ============================================================ -->
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-mark"></span>
-      <h1>AgriGantry<span class="brand-light"> Control</span></h1>
-    </div>
-    <div class="topbar-status">
-      <!-- Says SIMULATED when no real hardware is attached. Always visible:
-           the same interface will one day move real motors and the operator
-           should never have to guess which they are looking at. -->
-      <span id="mode-badge" class="badge badge-sim">SIMULATED</span>
-      <span class="conn">
-        <span id="conn-dot" class="dot dot-off"></span>
-        <span id="conn-text">Connecting…</span>
-      </span>
+  <header class="app-header">
+    <div class="header-inner">
+      <a class="brand" href="#controls"><span class="brand-mark" aria-hidden="true"></span>AgriGantry</a>
+      <nav aria-label="Main sections">
+        <a href="#controls" data-page="controls" aria-current="page">Controls<span id="controls-count" class="tab-count motor-count" aria-hidden="true" hidden></span></a>
+        <a href="#garden" data-page="garden">Garden<span id="garden-count" class="tab-count" aria-hidden="true" hidden></span></a>
+      </nav>
+      <div class="connection"><span id="mode-badge">Awaiting mode</span><span id="conn-text" role="status">Connecting…</span></div>
+      <a class="guide-link" href="#tutorial" data-page="tutorial"><span aria-hidden="true">?</span> Tutorial</a>
     </div>
   </header>
 
-  <div id="estop-banner" class="banner banner-estop hidden">
-    EMERGENCY STOP ACTIVE — motion halted. Press RESUME to re-enable controls.
-  </div>
-  <div id="alm-banner" class="banner banner-alm hidden">
-    MOTOR ALARM — ALL MACHINE MOVEMENT IS HALTED until every ALM is cleared.
-  </div>
-
-  <main class="layout">
-
-    <!-- ============================================================
-         THE MACHINE. The wide panel is the centrepiece of the page.
-         ============================================================ -->
-    <section class="panel panel-scene">
-      <div class="scene-head">
-        <h2>Machine View</h2>
-        <div class="scene-tools">
-          <button id="btn-toggle-view" class="btn btn-small" aria-pressed="false">3D VIEW: OFF</button>
-          <button id="btn-reset-view" class="btn btn-small" disabled>RESET VIEW</button>
-        </div>
+  <main class="shell">
+    <div class="page-heading">
+      <h1 id="page-title">Gantry controls</h1>
+      <div class="stop-controls">
+        <button id="jump-alerts" class="alert-link" hidden>Alerts</button>
+        <button id="btn-estop" class="stop-btn" disabled><span class="stop-square" aria-hidden="true"></span> Stop</button>
+        <button id="btn-resume" class="quiet-btn" disabled>Clear stop</button>
       </div>
+    </div>
 
-      <div id="scene-frame" class="scene-frame view-disabled">
-        <div id="scene-container" class="scene-container"></div>
-        <div id="scene-status" class="scene-status">3D view is off</div>
-
-        <!-- A compact CAD-style navigation cube. Click a face for an
-             orthogonal view or a corner for the matching diagonal view. -->
+    <div class="workspace">
+      <div class="work-pane" id="controls-page">
+        <section class="panel machine-panel" aria-labelledby="machine-title">
+          <div class="panel-head"><h2 id="machine-title">Machine view</h2>
+            <div class="actions"><button id="btn-reset-view" class="quiet-btn" disabled>Reset view</button>
+              <button id="btn-toggle-view" class="soft-btn" aria-pressed="false">Show 3D</button></div>
+          </div>
+          <div id="scene-frame" class="scene-frame view-disabled">
+            <div class="bed-overview" aria-hidden="true">
+              <div class="overview-bed"><div class="soil-ridges"></div>
+                <div id="mini-gantry" class="gantry-rail"><i id="mini-tool" class="tool-head"></i></div>
+              </div>
+            </div>
+            <div id="scene-container"></div>
+            <span id="plan-status" class="plan-caption">Bed overview</span>
+            <div id="scene-status" class="scene-status" role="status">3D view is off</div>
         <div id="view-cube" class="view-cube is-hidden" aria-label="Camera view selector" aria-hidden="true">
           <div id="view-cube-body" class="view-cube-body" aria-label="Select a camera view">
             <button class="view-cube-face cube-front" type="button" data-view="front">FRONT</button>
@@ -75,88 +64,146 @@
             <button class="view-cube-corner corner-bbl" type="button" data-view="bottom-back-left" aria-label="Bottom back left isometric view"></button>
           </div>
         </div>
+          </div>
+        </section>
 
-        <!-- ========================================================
-             MINIMAP, in the corner of the scene.
-
-             A perspective camera is a poor way to judge exactly where the
-             tool head sits over the bed. This gives that back at a glance,
-             and being small and circular it reads as an instrument rather
-             than competing with the machine behind it.
-             ======================================================== -->
-        <div class="minimap">
-          <div class="minimap-dial">
-            <!-- The bed, drawn to the machine's true proportions by JS. -->
-            <div id="mini-bed" class="mini-bed">
-              <div id="mini-gantry" class="mini-gantry"></div>
-              <div id="mini-tool" class="mini-tool"></div>
+        <section id="paired-panel" class="panel" hidden>
+          <div class="panel-head"><h2>X-axis bench test</h2><span class="tag">One revolution</span></div>
+          <div class="placement">
+            <p class="hint">X1 has the motor and encoder. X2 participates with its motor socket empty. Keep this page open during motion.</p>
+            <output id="paired-state" aria-live="polite"></output>
+            <div class="actions">
+              <button id="paired-arm" class="quiet-btn" disabled>Arm X</button>
+              <button id="paired-move" class="solid-btn" disabled>Run one revolution</button>
+              <button id="paired-stop" class="stop-btn" disabled>Stop X</button>
             </div>
-            <div class="minimap-home">H</div>
+            <output id="paired-result"></output>
+            <details id="paired-details" hidden><summary>Driver readbacks</summary><div id="paired-drivers"></div></details>
           </div>
-          <div class="minimap-readout">
-            <span id="mini-x">X —</span>
-            <span id="mini-y">Y —</span>
-            <span id="mini-z">Z —</span>
+        </section>
+        <section id="controller-panel" class="panel" hidden>
+          <div class="panel-head"><h2>Controller telemetry</h2><span class="tag">Read only</span></div>
+          <div class="placement">
+            <p id="controller-sample" class="hint"></p>
+            <output id="controller-values"></output>
+            <button id="scan-drivers" class="quiet-btn" hidden disabled>Check driver SPI</button>
+            <p id="scan-hint" class="hint" hidden>Wakes all four drivers for a register check, then returns them to sleep.</p>
+            <div id="driver-report"></div>
           </div>
-        </div>
-      </div>
-    </section>
+        </section>
 
-    <!-- ============================================================
-         CONTROL DECK
-         ============================================================ -->
-    <!-- On a wide screen this becomes its own scrolling region, independent
-         of the machine view beside it. See APP SHELL in style.css. -->
-    <aside class="deck">
-
-      <!-- Safety first in the markup so that on a phone, where the layout
-           stacks, the emergency stop stays near the top. -->
-      <div class="panel panel-safety">
-        <button id="btn-estop" class="btn btn-estop">EMERGENCY&nbsp;STOP</button>
-        <button id="btn-resume" class="btn btn-resume">RESUME</button>
-      </div>
-
-      <div class="panel">
-        <h2>Homing</h2>
-        <p class="hint">Axes must be homed before they will accept moves.</p>
-        <button id="btn-home-all" class="btn btn-primary btn-wide">HOME ALL AXES</button>
-      </div>
-
-      <!-- Per-axis controls are generated from /api/config, so resizing or
-           renaming an axis there updates this with no edits here. -->
-      <div id="axis-controls"></div>
-
-      <div class="panel">
-        <h2>Motor Alarms</h2>
-        <div id="alm-lights" class="alm-lights"></div>
+        <section class="panel movement" aria-labelledby="move-title">
+          <div class="panel-head"><h2 id="move-title">Move gantry</h2><label class="jog-size">Distance per tap
+            <select id="jog-distance"><option value="10">10 mm</option><option value="25" selected>25 mm</option><option value="50">50 mm</option></select></label>
+          </div>
+          <div class="movement-body">
+            <div class="jogs">
+              <div class="xy-pad" role="group" aria-label="Horizontal movement">
+                <button class="arrow forward" data-axis="y" data-sign="-1" aria-label="Forward, Y minus" title="Forward (Y−)" disabled></button>
+                <button class="arrow left" data-axis="x" data-sign="-1" aria-label="Left, X minus" title="Left (X−)" disabled></button>
+                <span class="pad-center" aria-hidden="true">X / Y</span>
+                <button class="arrow right" data-axis="x" data-sign="1" aria-label="Right, X plus" title="Right (X+)" disabled></button>
+                <button class="arrow back" data-axis="y" data-sign="1" aria-label="Back, Y plus" title="Back (Y+)" disabled></button>
+              </div>
+              <div class="z-pad" role="group" aria-label="Tool height">
+                <button class="arrow" data-axis="z" data-sign="-1" aria-label="Raise tool" title="Raise tool" disabled></button><span>Lift · Z</span>
+                <button class="arrow" data-axis="z" data-sign="1" aria-label="Lower tool" title="Lower tool" disabled></button>
+              </div>
+            </div>
+            <div class="positions">
+              <div class="position-head"><h3>Axis position</h3><button id="btn-home-all" class="solid-btn" disabled>Home all</button></div>
+              {% for axis in cfg.axes %}
+              <div class="axis-row"><b>{{ axis|upper }}</b><div class="axis-track"><i id="bar-{{ axis }}"></i></div>
+                <output id="position-{{ axis }}">—</output><button class="quiet-btn" data-home="{{ axis }}" disabled>Home {{ axis|upper }}</button></div>
+              {% endfor %}
+            </div>
+          </div>
+        </section>
       </div>
 
-      <details class="panel panel-dev">
-        <summary>Developer Tools (simulation only)</summary>
-        <p class="hint">
-          Inject fake faults to test the alarm display. No equivalent on real
-          hardware.
-        </p>
-        <div id="dev-alm-buttons" class="dev-buttons"></div>
-        <button id="btn-clear-alm" class="btn btn-small">Clear all alarms</button>
-      </details>
-    </aside>
+      <div class="work-pane" id="garden-page" hidden>
+        <section class="panel garden-panel" aria-labelledby="bed-title">
+          <div class="panel-head"><h2 id="bed-title">Planting bed</h2><span id="bed-total" class="tag">6 spots</span></div>
+          <div class="garden-body">
+            <div class="seed-library"><h3>Seed library</h3><p class="hint" id="seed-hint">Drag a seed to a spot, or select it and tap the spot.</p>
+              <div class="seed-grid">
+              {% for crop, label in cfg.garden.crops.items() %}
+                <button class="seed-card" type="button" data-crop="{{ crop }}" aria-pressed="false" draggable="true" disabled>
+                  <span aria-hidden="true" class="crop-art crop-{{ crop }}"></span><strong>{{ label }}</strong></button>
+              {% endfor %}
+              </div>
+            </div>
+            <div class="bed-wrap"><div class="planting-bed" role="group" aria-label="Six planting spots, three rows and two columns">
+              {% for zone in cfg.garden.spots %}
+                <button class="spot" data-spot="{{ zone }}" aria-pressed="{{ 'true' if loop.first else 'false' }}">
+                  <span class="spot-id">{{ zone }}</span><span class="spot-count" aria-hidden="true" hidden></span><span class="spot-art" aria-hidden="true">+</span><span class="spot-crop">Empty</span><span class="spot-stage"></span></button>
+              {% endfor %}
+            </div></div>
+          </div>
+        </section>
+        <section class="panel" aria-labelledby="placement-title">
+          <div class="panel-head"><h2 id="placement-title" tabindex="-1">Spot A1</h2><span id="selected-stage" class="tag">Empty</span></div>
+          <form id="placement-form" class="placement">
+            <div><h3 id="plant-name">Choose a seed</h3><p class="hint" id="plant-help">Select a seed, then choose its spot.</p></div>
+            <details class="coordinates"><summary>Target coordinates</summary>
+              <fieldset><legend>Millimetres from home</legend>
+              {% for axis in cfg.axes %}<label>{{ axis|upper }} <input id="target-{{ axis }}" type="number" step="1" required disabled></label>{% endfor %}
+              </fieldset>
+            </details>
+            <div class="actions"><button id="place-seed" type="submit" class="solid-btn" disabled>Place seed</button>
+              <button id="mark-ready" type="button" class="soft-btn" disabled hidden>Mark ready to harvest</button>
+              <button id="remove-seed" type="button" class="quiet-btn" disabled>Remove plan</button>
+              <button id="mark-watered" type="button" class="soft-btn" disabled hidden>Mark watered</button></div>
+          </form>
+        </section>
+      </div>
+
+      {% include "tutorial.html" %}
+
+      <aside class="side-pane">
+        <section id="alerts-panel" class="panel" aria-labelledby="alerts-title">
+          <div class="panel-head"><h2 id="alerts-title" tabindex="-1">Alerts</h2><span class="alert-count" id="alert-count">—</span></div>
+          <div class="alerts-list" id="alert-list" aria-live="polite"><p>Waiting for status…</p></div>
+          <details id="demo-tools" class="show-more" hidden><summary>Show more <span>Demo triggers</span></summary>
+            <div class="trigger-body">
+              <h3>Motor alarms</h3><div class="trigger-buttons">{% for motor in cfg.motors %}
+                <button class="quiet-btn" data-alarm="{{ motor }}" disabled>ALM {{ motor }}</button>{% endfor %}</div>
+              <h3>Garden notifications</h3>
+              <label class="trigger-label" for="demo-spot">Plant to notify</label>
+              <select id="demo-spot" disabled>{% for zone in cfg.garden.spots %}<option value="{{ zone }}">{{ zone }}</option>{% endfor %}</select>
+              <div class="trigger-buttons"><button class="quiet-btn" data-notice="low_moisture" disabled>Low moisture</button>
+                <button class="quiet-btn" data-notice="harvest_ready" disabled>Harvest ready</button>
+                <button class="quiet-btn" data-notice="demo_plant" hidden disabled>Add demo radish</button></div>
+              <p class="hint" id="demo-plant-hint" hidden></p>
+              <h3>Bed conditions</h3><div class="trigger-buttons">
+                <button class="quiet-btn" data-notice="sample_conditions" disabled>Show sample readings</button>
+                <button class="quiet-btn" data-notice="high_temperature" disabled>High temperature</button></div>
+              <button class="text-btn" id="clear-alerts" disabled>Clear demo alerts</button>
+            </div></details>
+        </section>
+        <section class="panel" aria-labelledby="conditions-title"><div class="panel-head"><h2 id="conditions-title">Bed conditions</h2><span class="tag" id="reading-source" hidden>Demo readings</span></div>
+          <dl class="condition-list">
+            {% for field, label, unit, low, high in [
+              ('soil_moisture_pct', 'Soil moisture', '%', 30, 60),
+              ('temperature_c', 'Air temperature', ' °C', 18, 28),
+              ('soil_ph', 'Soil pH', '', 6, 7),
+              ('humidity_pct', 'Air humidity', '%', 40, 70)
+            ] %}
+            <div data-reading="{{ field }}" data-unit="{{ unit }}" data-low="{{ low }}" data-high="{{ high }}">
+              <dt>{{ label }}</dt><dd><span class="reading-value">No reading</span>
+                <span class="reading-status" data-state="unknown" title="No reading yet"><i aria-hidden="true">—</i> <span>Unknown</span></span></dd>
+            </div>
+            {% endfor %}
+          </dl>
+        </section>
+        <details class="panel activity"><summary>Activity log</summary><div id="log" class="log"></div></details>
+      </aside>
+    </div>
+    <p id="feedback" class="feedback" role="status" hidden></p>
   </main>
-
-  <!-- ============================================================
-       EVENT LOG: mirrors the messages the Arduino prints over serial.
-       ============================================================ -->
-  <section class="panel panel-log">
-    <h2>Event Log</h2>
-    <div id="log" class="log"></div>
-  </section>
-
+  <script id="machine-config" type="application/json">{{ cfg|tojson }}</script>
   <script src="{{ url_for('static', filename='js/socket.io.min.js') }}"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-
-  <!-- three.js is loaded as ES modules. The import map lets scene3d.js write
-       `import ... from "three"` while the files are served from this server
-       rather than a CDN - the machine may sit on WiFi with no internet. -->
   <script type="importmap">
   {
     "imports": {
@@ -181,7 +228,7 @@
     let viewEnabled = false;
 
     const cubePoses = {
-      iso: [-28, -38],
+      overview: [-14, -49],
       front: [0, 0],
       back: [0, 180],
       left: [0, 90],
@@ -210,14 +257,14 @@
     }
 
     function showSelectedView(viewName) {
-      const pose = cubePoses[viewName] || cubePoses.iso;
+      const pose = cubePoses[viewName] || cubePoses.overview;
       setCubeRotation(pose[0], pose[1], true);
       if (scene3d && sceneReady) { scene3d.setView(viewName); }
     }
 
     function selectCubeButton(button) {
         const viewName = button.dataset.view;
-        const pose = cubePoses[viewName] || cubePoses.iso;
+        const pose = cubePoses[viewName] || cubePoses.overview;
         cubeBody.dataset.pitch = pose[0];
         cubeBody.dataset.yaw = pose[1];
         showSelectedView(viewName);
@@ -237,18 +284,14 @@
       });
     });
 
-    cubeBody.dataset.pitch = cubePoses["top-front-right"][0];
-    cubeBody.dataset.yaw = cubePoses["top-front-right"][1];
-    setCubeRotation(
-      cubePoses["top-front-right"][0],
-      cubePoses["top-front-right"][1],
-      true
-    );
+    cubeBody.dataset.pitch = cubePoses.overview[0];
+    cubeBody.dataset.yaw = cubePoses.overview[1];
+    setCubeRotation(...cubePoses.overview, true);
 
     async function enable3dView() {
       viewEnabled = true;
       frameEl.classList.remove("view-disabled");
-      toggleButton.textContent = "3D VIEW: ON";
+      toggleButton.textContent = "Hide 3D";
       toggleButton.setAttribute("aria-pressed", "true");
       toggleButton.disabled = true;
       statusEl.textContent = sceneReady ? "" : "Loading machine…";
@@ -265,16 +308,20 @@
         // right pose on its first visible frame rather than snapping later.
         if (window.farmbotConfig) { scene3d.setMachineConfig(window.farmbotConfig); }
         if (window.farmbotStatus) { scene3d.update(window.farmbotStatus); }
-        scene3d.start();
+        if (!document.getElementById('controls-page').hidden) { scene3d.start(); }
         statusEl.classList.add("is-gone");
         resetButton.disabled = false;
         viewCube.classList.remove("is-hidden");
         viewCube.setAttribute("aria-hidden", "false");
       } catch (err) {
         viewEnabled = false;
+        frameEl.classList.add("view-disabled");
+        viewCube.classList.add("is-hidden");
+        viewCube.setAttribute("aria-hidden", "true");
+        resetButton.disabled = true;
         statusEl.textContent = "Could not load the machine model: " + err.message;
         statusEl.classList.add("is-error");
-        toggleButton.textContent = "RETRY 3D VIEW";
+        toggleButton.textContent = "Retry 3D";
         toggleButton.setAttribute("aria-pressed", "false");
       } finally {
         toggleButton.disabled = false;
@@ -285,7 +332,7 @@
       viewEnabled = false;
       if (scene3d && sceneReady) { scene3d.stop(); }
       frameEl.classList.add("view-disabled");
-      toggleButton.textContent = "3D VIEW: OFF";
+      toggleButton.textContent = "Show 3D";
       toggleButton.setAttribute("aria-pressed", "false");
       resetButton.disabled = true;
       viewCube.classList.add("is-hidden");
@@ -309,10 +356,16 @@
       if (scene3d) { scene3d.setMachineConfig(e.detail); }
     });
 
+    window.addEventListener("farmbot:page", function (event) {
+      if (!scene3d || !sceneReady || !viewEnabled) { return; }
+      if (event.detail === "controls") { scene3d.start(); }
+      else { scene3d.stop(); }
+    });
+
     resetButton.addEventListener("click", function () {
       if (scene3d && sceneReady) {
         scene3d.resetView();
-        const pose = cubePoses["top-front-right"];
+        const pose = cubePoses.overview;
         cubeBody.dataset.pitch = pose[0];
         cubeBody.dataset.yaw = pose[1];
         setCubeRotation(pose[0], pose[1], true);

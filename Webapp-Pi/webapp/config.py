@@ -15,7 +15,9 @@ their mechanical end clearances. When measured calibration data is available,
 edit the `travel_mm` values here and nothing else.
 """
 
+import hashlib
 import os
+from pathlib import Path
 
 # -------------------- AXIS GEOMETRY --------------------
 #
@@ -163,6 +165,40 @@ def all_motor_names():
     return names
 
 
+GARDEN_CROPS = {"carrot": "Carrot", "radish": "Radish", "basil": "Basil", "lettuce": "Lettuce"}
+
+
+def garden_spots():
+    """Three rows by two columns. Coordinates are whole millimetres from home."""
+    travel = {axis: int(settings["travel_mm"]) for axis, settings in AXES.items()}
+    spots = {}
+    for row in range(3):
+        for col, letter in enumerate("AB"):
+            low = {"x": col * travel["x"] // 2, "y": row * travel["y"] // 3, "z": 0}
+            high = {
+                "x": (col + 1) * travel["x"] // 2 - int(col == 0),
+                "y": (row + 1) * travel["y"] // 3 - int(row < 2),
+                "z": travel["z"],
+            }
+            center = {axis: round((low[axis] + high[axis]) / 2) for axis in travel}
+            spots[f"{letter}{row + 1}"] = {"min": low, "max": high, "target": center}
+    return spots
+
+
+def _server_build():
+    """Identify the checkout and Python code loaded by this process."""
+    root = Path(__file__).resolve().parent
+    digest = hashlib.sha256(os.path.normcase(str(root)).encode())
+    sources = [root / name for name in ("config.py", "app.py", "run.py")]
+    for source in [*sources, *sorted((root / "hardware").glob("*.py"))]:
+        digest.update(source.read_bytes())
+    return digest.hexdigest()[:16]
+
+
+# Capture at import. An older running server must keep reporting its own build.
+SERVER_BUILD = _server_build()
+
+
 def client_config():
     """
     The subset of this configuration the browser needs, as a JSON-safe dict.
@@ -173,6 +209,7 @@ def client_config():
     of truth for it, and this is that file.
     """
     return {
+        "server_build": SERVER_BUILD,
         "axes": {
             axis_id: {
                 "label": axis["label"],
@@ -184,6 +221,7 @@ def client_config():
             for axis_id, axis in AXES.items()
         },
         "motors": all_motor_names(),
+        "garden": {"crops": GARDEN_CROPS, "spots": garden_spots(), "plant_tasks": True},
         # Tells the frontend which axis to draw where on the bed map, so the
         # JavaScript never has to assume an orientation.
         "bed_map": BED_MAP,

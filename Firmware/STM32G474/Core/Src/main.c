@@ -20,12 +20,13 @@
 #include "main.h"
 #include "spi.h"
 #include "tim.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "multi_driver_diag.h"
+#include "pi_uart_diag.h"
 
 /* USER CODE END Includes */
 
@@ -92,9 +93,10 @@ int main(void)
   MX_GPIO_Init();
   MX_SPI3_Init();
   MX_TIM5_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  Multi_Driver_Diagnostic_Run();
+  PiUart_Init();
 
   /* USER CODE END 2 */
 
@@ -105,7 +107,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    Multi_Driver_Diagnostic_Service();
+    PiUart_Poll();
   }
   /* USER CODE END 3 */
 }
